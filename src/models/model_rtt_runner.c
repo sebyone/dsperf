@@ -35,13 +35,18 @@
 
 #include "rtt_runner.h"
 
+#include "helpers.h"
+
+/*
 static double get_time_microseconds()
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (tv.tv_sec * 1e6) + tv.tv_usec;
 }
+*/
 
+// -------------------------------------------------------------------------------------------------------- !
 void run_rtt_server(int port, int pkt_size)
 {
     int server_fd, client_fd;
@@ -82,6 +87,7 @@ void run_rtt_server(int port, int pkt_size)
     printf("[SERVER] Connection closed\n");
 }
 
+// -------------------------------------------------------------------------------------------------------- !
 void run_rtt_client(const char *ip, int port, int pkt_size, int num_pings)
 {
     int sock;

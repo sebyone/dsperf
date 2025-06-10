@@ -43,11 +43,9 @@
 #include <stdbool.h>
 #include "version.h"
 
-
 // daas
 // #include "daas.hpp"
 // #include "daas_types.hpp"
-
 
 #if defined(__linux__) || defined(__RASP__)
 #include <sys/types.h>
@@ -56,22 +54,25 @@
 #include <sys/time.h>
 #endif
 
-//Include test modules
+// Include test modules
 #include "system_info.h"
-#include "test_models/model_bandwidth.h"
-#include "dperf_local.hpp"
+
+#include "dsperf_local.hpp"
 
 // Constants for configuration
 
-
-
-void start_underlay_server(program_args_t *test);
-void start_underlay_client(program_args_t *test);
+//
+#include "models/model_ipv4_tcp.h"
 
 #ifdef WITH_DAAS
+#include "test_models\model_daas.h"
 void start_daas_client(daas_setup_t *setup, program_args_t *test);
 void start_daas_server(daas_setup_t *setup);
 #endif
+
+void start_server(program_args_t *test);
+
+void start_client(program_args_t *test);
 
 double now_sec()
 {
@@ -80,20 +81,24 @@ double now_sec()
     return tv.tv_sec + tv.tv_usec / 1e6;
 }
 
-
-void start_underlay_server(program_args_t *test)
+// -------------------------------------------------------------------------------------------------------- !
+void start_server(program_args_t *test)
 {
-        run_underlay_bandwidth_server(test->port);
-        
+#ifdef WITH_DAAS
+    run_overlay_bandwidth_server(setup);
+#else
+    run_bandwidth_ipv4_tcp_server(test->port);
+#endif
 }
 
-
-void start_underlay_client(program_args_t *test)
-
+// -------------------------------------------------------------------------------------------------------- !
+void start_client(program_args_t *test)
 {
+
+    // MODEL:set_environment() !!!!!!!
     char ip[64];
     int port;
-    const char* host = test->remote_ip;
+    const char *host = test->remote_ip;
     const char *colon = strchr(host, ':');
     if (colon == NULL)
     {
@@ -114,51 +119,55 @@ void start_underlay_client(program_args_t *test)
 
     if (!test->csv_format)
     {
-        printf("dperf started as client to %s:%d with %s size %d\n",
-               ip, port, "block", test->block_size);
+        printf("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
     }
 
-        run_underlay_bandwidth_client(test, ip, port);
-
+    run_bandwidth_ipv4_tcp_client(test, ip, port);
 }
+
 #ifdef WITH_DAAS
 void start_daas_server(daas_setup_t *setup)
 {
 
     run_overlay_bandwidth_server(setup);
-
 }
 
 void start_daas_client(daas_setup_t *setup, program_args_t *test)
 {
 
     run_overlay_bandwidth_client(setup, test);
-
 }
 #endif
 
-
-
+// -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
 {
 
     program_args_t args;
+
+    // MODELS: execeutes set_environment() !!!!!!!
+
 #ifdef WITH_DAAS
     daas_setup_t daas_setup;
 #endif
     parse_args(argc, argv, &args);
 
-    if (validate_args(&args, argv[0]) != EXIT_SUCCESS) {
+    if (validate_args(&args, argv[0]) != EXIT_SUCCESS)
+    {
         return EXIT_FAILURE;
     }
+
 #ifdef WITH_DAAS
-     if (args.layer_mode == 1) {
-        if (!parse_daas_ini(args.overlay_path, &daas_setup)) {
+    if (args.layer_mode == 1)
+    {
+        if (!parse_daas_ini(args.overlay_path, &daas_setup))
+        {
             fprintf(stderr, "Error: Failed to parse .ini overlay file.\n");
             return EXIT_FAILURE;
         }
     }
 #endif
+
     /*if (args.csv_enabled)
     {
     FILE *f = fopen(args.csv_path, "w");
@@ -191,15 +200,16 @@ int main(int argc, char *argv[])
     {
         if (args.is_sender)
         {
-            start_underlay_client(&args);
+            start_client(&args);
         }
         else
         {
-            start_underlay_server(&args);
+            start_server(&args);
         }
     }
     else
     {
+
 #ifdef WITH_DAAS
         if (args.is_sender)
         {
@@ -211,9 +221,11 @@ int main(int argc, char *argv[])
             start_daas_server(&daas_setup);
         }
 #else
-	printf("Daas not included\n");
+        printf("Daas overlay tests not available !\n");
 #endif
     }
+
+    // MODEL:reset_environment() !!!!!!!
 
     return EXIT_SUCCESS;
 }
