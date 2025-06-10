@@ -62,7 +62,7 @@
 // Constants for configuration
 
 //
-#include "models/model_ipv4_tcp.h"
+#include "models\model_ipv4_tcp.h"
 
 #ifdef WITH_DAAS
 #include "test_models\model_daas.h"
@@ -122,7 +122,25 @@ void start_client(program_args_t *test)
         printf("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
     }
 
-    run_bandwidth_ipv4_tcp_client(test, ip, port);
+    // run_bandwidth_ipv4_tcp_client(test, ip, port);
+
+    /*
+     *xxx_set       
+     contiene tutte le inizializzazioni. Se servono varibili definirle all'interno del file .c
+     *xxx_open
+     *xxx_snd
+     *xxx_rcv
+     *xxx_close
+     *xxx_unset
+     */
+
+
+    ipv4tcp_preset();       
+
+    while (ipv4tcp_cycle_send())
+    {
+    }
+    ipv4tcp_unset();
 }
 
 #ifdef WITH_DAAS
@@ -200,7 +218,7 @@ int main(int argc, char *argv[])
     {
         if (args.is_sender)
         {
-            start_client(&args);
+            start_client(&args); //
         }
         else
         {

@@ -34,7 +34,7 @@
  *
  */
 
- // Sub Protocol as defined in RFC791
+// Sub Protocol as defined in RFC791
 //
 // Numero di protocollo	Nome del protocollo	Abbreviazione
 // ----+---------------------------------------+----------
@@ -62,10 +62,31 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-#include <time.h>
 
-#include "../timer.h"
-#include "../dperf_local.hpp"
+// #include <time.h>
+// #include "../timer.h"
+#include "helpers\utils.h"
+
+#include "../locals.hpp"
+
+/*
+ *xxx_set
+ contiene tutte le inizializzazioni. Se servono varibili definirle all'interno del file .c
+ *xxx_open
+ *xxx_snd
+ *xxx_rcv
+ *xxx_close
+ *xxx_unset
+ */
+
+
+int ipv4tcp_preset();
+// xxx_open
+int ipv4tcp_cycle_send();
+// xxx_rcv
+// xxx_close
+int ipv4tcp_unset();
+
 
 void run_bandwidth_ipv4_tcp_client(program_args_t *test, const char *server_ip, int server_port);
 

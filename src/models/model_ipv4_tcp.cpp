@@ -2,9 +2,8 @@
 
 // Sends a block of data to remote server and print out all test results (test_outs)
 
-struct
+struct // model_ipv4_tcp report
 {
-
     // Data Block [MB]
     // Protocol - IPV4 current test model
     // Pkt Length [bytes]
@@ -18,13 +17,20 @@ struct
     // Pkt Err.[%]
     // Transfer Time [ms]
     // Throughput [MBps]  [Mbps] [pps]
-
+    /*     printf("\n[SUMMARY RUN %d/%d]\n", i + 1, repetitions);
+           printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(block_size));
+           printf("  Protocol:           IPv4\n");
+           printf("  Packet Length:      %d bytes\n", pkt_payload_size);
+           printf("  Header:             %d bytes\n", pkt_header_size);
+           printf("  Efficiency:         %.3f %%\n", efficiency);
+           printf("  Pkts to send:     %.3f\n", pkts_to_send); // numero pacchetti da inviare
+           */
 } test_outs;
 
 enum
 {
     _OUTS_HEADER = 1, // header
-    _OUTS_LINE = 2    // simple line
+    _OUTS_ONELINE = 2 // simple line
                       // complex line
                       // footer
                       // ....
@@ -52,34 +58,61 @@ void print_outs(out_bandwidth_ipv4_tcp_t *_pout, frm_stuffs_e _switch)
             printf("Transfer Time [ms]\t");
             printf("Throughput [MB/s]\t[Mb/s]\t[pps]\n");
             break;
+
+        case _OUTS_ONELINE:
+            printf("\n[SUMMARY RUN %d/%d]\n", i + 1, repetitions);
+            printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(block_size));
+            printf("  Protocol:           IPv4\n");
+            printf("  Packet Length:      %d bytes\n", pkt_payload_size);
+            printf("  Header:             %d bytes\n", pkt_header_size);
+            printf("  Efficiency:         %.3f %%\n", efficiency);
+            printf("  Pkts to send:     %.3f\n", pkts_to_send); // numero pacchetti da inviare
+            break;
+
+        case _OUTS_SUMMARY:
+            printf("  Pkt sent: %d\n", pkts_counter);              // numero pacchetti inviati
+            printf("  Pkt loss: %d\n", 0);                         //
+            printf("  Data Sent:         %d bytes\n", bytes_sent); // Mega bytes
+            // printf("  Data Lost:         %d bytes\n", total_lost);
+            printf("  Pkt Err. %%:      %.3f %%\n", out_bytes_lost_percents);
+            printf("  Transfer Time:      %.3f ms\n", elapsed_ms);
+            printf("  Throughput:         %.3f MB/s | %.3f Mbps\n", out_throughput_Mbytes, out_throughput_Mbits);
+            printf("  Throughput (pps):   %.3f pps\n", out_throughput_pps);
+
+            printf("[CLIENT] Transfer Time: %.3f ms | Total Bytes: %d | Throughput: %.3f MB/s (%.3f Mbps)\n",
+                   elapsed_ms, bytes_sent, out_throughput_Mbytes, out_throughput_Mbits);
+            break;
+
+        case _OUTS_SUMMARY:
+            printf("'%d/%d\t", i + 1, repetitions);
+            printf("%.3f\t", _Byte2Megabyte(block_size));
+            printf("IPv4\t");
+            printf("%d\t", pkt_payload_size);
+            printf("%d\t", pkt_header_size);
+            printf("%.3f\t", efficiency);
+            printf("%.3f\t", pkts_to_send);               // numero pacchetti da inviare
+            printf("%d\t", pkts_counter);                 // numero pacchetti inviati
+            printf("%d\t", 0);                            //
+            printf("%.3f\t", _Byte2Megabyte(bytes_sent)); // Mega bytes
+            // printf("  Data Lost:         %d bytes\n", total_lost);
+            printf("%.3f\t", out_bytes_lost_percents);
+            printf("%.3f\t", elapsed_ms);
+            printf("%.3f\t%.3f\t%.3f\n", out_throughput_Mbytes, out_throughput_Mbits, out_throughput_pps);
+            break;
         }
 }
 
-// --------------------------------------------------------------------------------------------------------
-void run_bandwidth_ipv4_tcp_client(program_args_t *_test, const char *_server_ip, int _server_port)
+// -------------------------------------------------------------------------------------------------------- !
+int ipv4tcp_preset()
 {
-    size_t block_size = _test->block_size;
-    size_t mtu = _test->mtu_size;
-    const char *csv_path = _test->csv_path;
-    int repetitions = _test->repetitions;
-    bool __flag_output_csv = _test->csv_format;
-    bool csv_no_header = _test->csv_no_header;
-    bool mtu_defined = _test->mtu_defined;
-    int mtu_size = _test->mtu_size;
-    int time = _test->time;
-    bool __flag_time_defined = _test->time_defined;
-
-    const uint64_t target_bitrate_bps = 10 * 1000 * 1000; // 10 Mbps (Megabits)
 
     if (__flag_output_csv && csv_no_header)
     {
         print_outs(&test_outs, _OUTS_HEADER);
     }
 
-
     for (int i = 0; i < repetitions; i++)
     {
-
 
         // related to model's stuffs
         int mss = 0; // packet's payload size
@@ -182,13 +215,7 @@ void run_bandwidth_ipv4_tcp_client(program_args_t *_test, const char *_server_ip
 
         if (!__flag_output_csv)
         {
-            printf("\n[SUMMARY RUN %d/%d]\n", i + 1, repetitions);
-            printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(block_size));
-            printf("  Protocol:           IPv4\n");
-            printf("  Packet Length:      %d bytes\n", pkt_payload_size);
-            printf("  Header:             %d bytes\n", pkt_header_size);
-            printf("  Efficiency:         %.3f %%\n", efficiency);
-            printf("  Pkts to send:     %.3f\n", pkts_to_send); // numero pacchetti da inviare
+            print_outs(&test_outs, _OUTS_ONELINE);
         }
 
         // printf("[CLIENT] Sending %ld bytes in chunks of %d bytes...\n", block_size, chunk_size);
@@ -209,106 +236,111 @@ void run_bandwidth_ipv4_tcp_client(program_args_t *_test, const char *_server_ip
         double curr_time = start_time_def;
 
         ssize_t sent;
-
-        // Main sending cycle !!!!!!
-
-        int to_send;
-
-        if (__flag_time_defined) // Runs in time-mode
-        {
-            // curr_time < end_time_def
-            while ((curr_time < end_time_def))
-            {
-
-                to_send = pkt_payload_size;
-                if (send(sock, pkt_payload, to_send, 0) > 0)
-                    break;
-                curr_time = get_time_microseconds();
-            }
-        }
-        else // runs in block-size mode
-        {
-            while ((bytes_sent < block_size))
-            {
-
-                if (!dsperf_timer_wait_tick(timer)) // Semaphore
-                {
-                    break;
-                }
-                to_send = block_size - bytes_sent;
-                if (to_send > pkt_payload_size)
-                    to_send = pkt_payload_size;
-
-                // to_send = pkt_payload_size;
-                if ((sent = send(sock, pkt_payload, pkt_payload_size, 0)) <= 0)
-                    break;
-
-                bytes_sent += sent;
-                pkts_counter++;
-            }
-        }
-
-        double end_time = get_time_microseconds();
-
-        dsperf_timer_stop(timer);
-        dsperf_timer_destroy(timer);
-
-        double elapsed_ms = (end_time - start_time) / 1000; // us -> ms
-        double elapsed_s = elapsed_ms / 1000;
-
-        // Dopo aver effettuato il test, posso ottenere il numero di pacchetti persi soltanto ricevendo il numero effettivo che ha raggiunto il server
-        // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!! ( per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket!!!)
-
-        double out_throughput_Mbytes = (_Byte2Megabyte(bytes_sent) / (double)elapsed_s); // / (elapsed_ms / (double)1000); // Ottengo Mega byte per secondo
-        double out_throughput_Mbits = out_throughput_Mbytes * (double)8;                 // Ottengo Mega bit per secondo
-        double out_throughput_pps = (double)pkts_counter / elapsed_s;
-
-        int out_bytes_to_send = block_size; // Total byte to send
-        int out_bytes_lost = out_bytes_to_send - bytes_sent;
-
-        double out_bytes_lost_percents = out_bytes_to_send > 0 ? ((double)out_bytes_lost / out_bytes_to_send) * 100.0 : 0.0;
-
-        if (!__flag_output_csv)
-        {
-            printf("  Pkt sent: %d\n", pkts_counter);              // numero pacchetti inviati
-            printf("  Pkt loss: %d\n", 0);                         //
-            printf("  Data Sent:         %d bytes\n", bytes_sent); // Mega bytes
-            // printf("  Data Lost:         %d bytes\n", total_lost);
-            printf("  Pkt Err. %%:      %.3f %%\n", out_bytes_lost_percents);
-            printf("  Transfer Time:      %.3f ms\n", elapsed_ms);
-            printf("  Throughput:         %.3f MB/s | %.3f Mbps\n", out_throughput_Mbytes, out_throughput_Mbits);
-            printf("  Throughput (pps):   %.3f pps\n", out_throughput_pps);
-
-            printf("[CLIENT] Transfer Time: %.3f ms | Total Bytes: %d | Throughput: %.3f MB/s (%.3f Mbps)\n",
-                   elapsed_ms, bytes_sent, out_throughput_Mbytes, out_throughput_Mbits);
-        }
-        else
-        {
-            printf("'%d/%d\t", i + 1, repetitions);
-            printf("%.3f\t", _Byte2Megabyte(block_size));
-            printf("IPv4\t");
-            printf("%d\t", pkt_payload_size);
-            printf("%d\t", pkt_header_size);
-            printf("%.3f\t", efficiency);
-            printf("%.3f\t", pkts_to_send);               // numero pacchetti da inviare
-            printf("%d\t", pkts_counter);                 // numero pacchetti inviati
-            printf("%d\t", 0);                            //
-            printf("%.3f\t", _Byte2Megabyte(bytes_sent)); // Mega bytes
-            // printf("  Data Lost:         %d bytes\n", total_lost);
-            printf("%.3f\t", out_bytes_lost_percents);
-            printf("%.3f\t", elapsed_ms);
-            printf("%.3f\t%.3f\t%.3f\n", out_throughput_Mbytes, out_throughput_Mbits, out_throughput_pps);
-        }
-
-        free(pkt_payload);
-        close(sock);
-        /*
-        if (csv_enabled == 1)
-            fclose(csv);
-        */
-        // usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
     }
 }
+
+
+// -------------------------------------------------------------------------------------------------------- !
+void run_bandwidth_ipv4_tcp_client(program_args_t *_test, const char *_server_ip, int _server_port)
+{
+    size_t block_size = _test->block_size;
+    size_t mtu = _test->mtu_size;
+    const char *csv_path = _test->csv_path;
+    int repetitions = _test->repetitions;
+    bool __flag_output_csv = _test->csv_format;
+    bool csv_no_header = _test->csv_no_header;
+    bool mtu_defined = _test->mtu_defined;
+    int mtu_size = _test->mtu_size;
+    int time = _test->time;
+    bool __flag_time_defined = _test->time_defined;
+
+    const uint64_t target_bitrate_bps = 10 * 1000 * 1000; // 10 Mbps (Megabits)
+}
+
+// -------------------------------------------------------------------------------------------------------- !
+// Main sending cycle !!!!!!
+int ipv4tcp_cycle_send()
+{
+    int to_send;
+
+    if (__flag_time_defined) // Runs in time-mode
+    {
+        // curr_time < end_time_def
+        while ((curr_time < end_time_def))
+        {
+
+            to_send = pkt_payload_size;
+            if (send(sock, pkt_payload, to_send, 0) > 0)
+                break;
+            curr_time = get_time_microseconds();
+        }
+    }
+    else // runs in block-size mode
+    {
+        while ((bytes_sent < block_size))
+        {
+
+            if (!dsperf_timer_wait_tick(timer)) // Semaphore
+            {
+                break;
+            }
+            to_send = block_size - bytes_sent;
+            if (to_send > pkt_payload_size)
+                to_send = pkt_payload_size;
+
+            // to_send = pkt_payload_size;
+            if ((sent = send(sock, pkt_payload, pkt_payload_size, 0)) <= 0)
+                break;
+
+            bytes_sent += sent;
+            pkts_counter++;
+        }
+    }
+
+    double end_time = get_time_microseconds();
+
+    dsperf_timer_stop(timer);
+    dsperf_timer_destroy(timer);
+
+    double elapsed_ms = (end_time - start_time) / 1000; // us -> ms
+    double elapsed_s = elapsed_ms / 1000;
+
+    // Dopo aver effettuato il test, posso ottenere il numero di pacchetti persi soltanto ricevendo il numero effettivo che ha raggiunto il server
+    // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!! ( per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket!!!)
+
+    double out_throughput_Mbytes = (_Byte2Megabyte(bytes_sent) / (double)elapsed_s); // / (elapsed_ms / (double)1000); // Ottengo Mega byte per secondo
+    double out_throughput_Mbits = out_throughput_Mbytes * (double)8;                 // Ottengo Mega bit per secondo
+    double out_throughput_pps = (double)pkts_counter / elapsed_s;
+
+    int out_bytes_to_send = block_size; // Total byte to send
+    int out_bytes_lost = out_bytes_to_send - bytes_sent;
+
+    double out_bytes_lost_percents = out_bytes_to_send > 0 ? ((double)out_bytes_lost / out_bytes_to_send) * 100.0 : 0.0;
+
+    if (!__flag_output_csv)
+    {
+        print_outs(&test_outs, _OUTS_SUMMARY);
+    }
+    else
+    {
+        print_outs(&test_outs, _OUTS_SUMMARY);
+    }
+}
+
+// -------------------------------------------------------------------------------------------------------- !
+
+int ipv4tcp_unset()
+{
+
+    free(pkt_payload);
+    close(sock);
+    /*
+    if (csv_enabled == 1)
+        fclose(csv);
+    */
+    // usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
+}
+
 
 // -------------------------------------------------------------------------------------------------------- !
 void run_bandwidth_ipv4_tcp_server(int port)
