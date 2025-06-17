@@ -33,7 +33,7 @@
  *
  */
 
-// DaaS Protocol 
+// DaaS Protocol
 //
 // Daas Fresbee service API
 // -----------------------------------------------------
@@ -56,15 +56,13 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 
-#include "helpers.h"
-#include "../timer.h"
-#include "../dperf_local.hpp"
+#include "../dsperf_locals.h"
 
 // DaaS node stack - libdaas
 #include "daas.hpp"
 #include "daas_types.hpp"
 
-void run_bandwidth_daas_client(daas_setup_t *setup, program_args_t *test);
+void run_bandwidth_daas_client(daas_setup_t *setup, options_t *test);
 void run_bandwidth_daas_server(daas_setup_t *setup);
 
 #endif // MODEL_DAAS_H

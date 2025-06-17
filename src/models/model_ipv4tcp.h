@@ -1,4 +1,3 @@
-
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
@@ -34,7 +33,7 @@
  *
  */
 
-// Sub Protocol as defined in RFC791
+// Sub Protocol as defined in RFCs 790-791
 //
 // Numero di protocollo	Nome del protocollo	Abbreviazione
 // ----+---------------------------------------+----------
@@ -50,46 +49,41 @@
 #define MODEL_IPV4TCP_H
 
 #define TEST_MODEL_NAME "IPv4/TCP" // IP sub 6 (TCP)
+#define TEST_MODEL_TYPE 4          // [1..4] Capabilities, Availability, Capacity, Security
+#define TEST_MODEL_INFO "Throughput/Bandwidth v.01a"
+#define TEST_MODEL_LINK "developers@sebyone.it"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <stdbool.h>
+
+#if defined(__linux__) || defined(__RASP__)
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
+#endif
 
 // #include <time.h>
 // #include "../timer.h"
-#include "helpers\utils.h"
-
-#include "../locals.hpp"
-
-/*
- *xxx_set
- contiene tutte le inizializzazioni. Se servono varibili definirle all'interno del file .c
- *xxx_open
- *xxx_snd
- *xxx_rcv
- *xxx_close
- *xxx_unset
- */
 
 
-int ipv4tcp_preset();
-// xxx_open
-int ipv4tcp_cycle_send();
-// xxx_rcv
-// xxx_close
-int ipv4tcp_unset();
+#include "helpers.h"
+#include "locals.h"
+#include "options.h"
 
+// ipv4_tcp
+#define MIN_PORT 1
+#define MAX_PORT 65535
 
-void run_bandwidth_ipv4_tcp_client(program_args_t *test, const char *server_ip, int server_port);
+ret_t ipv4tcp_info(); // return test model information (string)
 
-void run_bandwidth_ipv4_tcp_server(int port);
+ret_t run_ipv4tcp_server(int port); // start loopback server
+
+ret_t run_ipv4tcp_client(options_t *test, const char *server_ip, int server_port); // performs test
 
 #endif // MODEL_IPV4TCP_H

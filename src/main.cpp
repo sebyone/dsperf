@@ -37,42 +37,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <getopt.h>
 #include <stdbool.h>
 #include "version.h"
 
-// daas
-// #include "daas.hpp"
-// #include "daas_types.hpp"
+#include "locals.h"
+#include "options.h"
 
-#if defined(__linux__) || defined(__RASP__)
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <arpa/inet.h>
-#include <sys/time.h>
-#endif
-
-// Include test modules
-#include "system_info.h"
-
-#include "dsperf_local.hpp"
-
-// Constants for configuration
-
-//
-#include "models\model_ipv4_tcp.h"
+// Testing modules
+#include "models\model_ipv4tcp.h"
 
 #ifdef WITH_DAAS
-#include "test_models\model_daas.h"
-void start_daas_client(daas_setup_t *setup, program_args_t *test);
-void start_daas_server(daas_setup_t *setup);
+// #include "daas.hpp"
+// #include "daas_types.hpp"
+#include "models\model_daas.h"
 #endif
 
-void start_server(program_args_t *test);
-
-void start_client(program_args_t *test);
 
 double now_sec()
 {
@@ -82,168 +62,51 @@ double now_sec()
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-void start_server(program_args_t *test)
-{
-#ifdef WITH_DAAS
-    run_overlay_bandwidth_server(setup);
-#else
-    run_bandwidth_ipv4_tcp_server(test->port);
-#endif
-}
-
-// -------------------------------------------------------------------------------------------------------- !
-void start_client(program_args_t *test)
-{
-
-    // MODEL:set_environment() !!!!!!!
-    char ip[64];
-    int port;
-    const char *host = test->remote_ip;
-    const char *colon = strchr(host, ':');
-    if (colon == NULL)
-    {
-        fprintf(stderr, "[CLIENT] Invalid host format. Use IP:PORT\n");
-        return;
-    }
-
-    size_t ip_len = colon - host;
-    strncpy(ip, host, ip_len);
-    ip[ip_len] = '\0';
-    port = atoi(colon + 1);
-
-    if (port < MIN_PORT || port > MAX_PORT)
-    {
-        fprintf(stderr, "[CLIENT] Invalid port number: %d\n", port);
-        return;
-    }
-
-    if (!test->csv_format)
-    {
-        printf("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
-    }
-
-    // run_bandwidth_ipv4_tcp_client(test, ip, port);
-
-    /*
-     *xxx_set       
-     contiene tutte le inizializzazioni. Se servono varibili definirle all'interno del file .c
-     *xxx_open
-     *xxx_snd
-     *xxx_rcv
-     *xxx_close
-     *xxx_unset
-     */
-
-
-    ipv4tcp_preset();       
-
-    while (ipv4tcp_cycle_send())
-    {
-    }
-    ipv4tcp_unset();
-}
-
-#ifdef WITH_DAAS
-void start_daas_server(daas_setup_t *setup)
-{
-
-    run_overlay_bandwidth_server(setup);
-}
-
-void start_daas_client(daas_setup_t *setup, program_args_t *test)
-{
-
-    run_overlay_bandwidth_client(setup, test);
-}
-#endif
-
-// -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
 {
-
-    program_args_t args;
-
-    // MODELS: execeutes set_environment() !!!!!!!
-
-#ifdef WITH_DAAS
-    daas_setup_t daas_setup;
-#endif
-    parse_args(argc, argv, &args);
-
-    if (validate_args(&args, argv[0]) != EXIT_SUCCESS)
+    options_t Settings;
+    parse_args(argc, argv, &Settings);
+    if (validate_args(&Settings, argv[0]) != EXIT_SUCCESS)
     {
         return EXIT_FAILURE;
     }
 
+    switch (Settings.target == 3)
+    {
+    case 3: // throughput (default)
+        switch (Settings.model)
+        {
+        case 0:                          // ipv4/tcp
+            if (Settings.host_role == 0) // 0 = server, 1 = client
+            {
+                run_ipv4tcp_server(Settings.port);
+            }
+            else
+            {
+                run_ipv4tcp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+            };
+
+            break;
+
+        case 1: // daas fresbee
 #ifdef WITH_DAAS
-    if (args.layer_mode == 1)
-    {
-        if (!parse_daas_ini(args.overlay_path, &daas_setup))
-        {
-            fprintf(stderr, "Error: Failed to parse .ini overlay file.\n");
-            return EXIT_FAILURE;
-        }
-    }
-#endif
+                // enable node ( if not alredy enabled)
 
-    /*if (args.csv_enabled)
-    {
-    FILE *f = fopen(args.csv_path, "w");
-    if (f == NULL)
-    {
-        perror("Error opening CSV file");
-        return EXIT_FAILURE;
-    }
-
-    time_t now = time(NULL);
-    char date_str[64];
-    strftime(date_str, sizeof(date_str), "%Y-%m-%d %H:%M:%S", localtime(&now));
-
-    fprintf(f, "Host: %s\n", get_os_name());
-    fprintf(f, "Architecture: %s\n", get_architecture());
-    fprintf(f, "Kernel: %s\n", get_kernel_version());
-    fprintf(f, "Date-Time: %s\n", date_str);
-
-    if (args.block_size > 0)
-    {
-        fprintf(f, "Data Block Size: %d\n", args.block_size);
-    }
-    fprintf(f, "Layer: %s\n", args.layer_mode == 0 ? "Underlay" : "DaaS Overlay");
-    fprintf(f, "Layer Version: %s\n", args.layer_mode == 0 ? "IPv4 plain sockets" : "DaaS Layer");
-
-    fclose(f);
-    }*/
-
-    if (args.layer_mode == 0)
-    {
-        if (args.is_sender)
-        {
-            start_client(&args); //
-        }
-        else
-        {
-            start_server(&args);
-        }
-    }
-    else
-    {
-
-#ifdef WITH_DAAS
-        if (args.is_sender)
-        {
-
-            start_daas_client(&daas_setup, &args);
-        }
-        else
-        {
-            start_daas_server(&daas_setup);
-        }
+            run_overlay_bandwidth_server(setup);
+            //
+            run_overlay_bandwidth_client(setup, test);
 #else
-        printf("Daas overlay tests not available !\n");
+                // print library not available
 #endif
-    }
+            break;
 
-    // MODEL:reset_environment() !!!!!!!
+        case 2: // ipv4/icmp (ping)
+            // set enviroment
+            // run test tcp
+
+            break;
+        }
+    }
 
     return EXIT_SUCCESS;
 }

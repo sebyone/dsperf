@@ -1,31 +1,32 @@
-#include "model_ipv4_tcp.h"
+
+
+#include "model_ipv4tcp.h"
 
 // Sends a block of data to remote server and print out all test results (test_outs)
 
+
 struct // model_ipv4_tcp report
 {
-    // Data Block [MB]
-    // Protocol - IPV4 current test model
-    // Pkt Length [bytes]
-    // Header [bytes]   - 17 bytes IP header + sub-protocol options 0..34 bytes
-    //
+    char *test_model = TEST_MODEL_NAME; // Setted
+    localif_t interface;                // test
+    int repetitions;                    // test executions
+    long int block_size;                // "data to send" traffic block size [MB]
+
+    char *model_info = TEST_MODEL_NAME; // Setted
+    int pkt_Length;                     //  packet size header included [bytes]
+    int pkt_header;                     // Header [bytes]   - 17 bytes IP header + sub-protocol options 0..34 bytes
     // Efficiency [%]   - ratio: [%] = payload / total_packet_size ( header+payload )
-    // Pkts to send   - trunc(blocksize / packet_payload) + (blocksize % packet_payload)
-    // Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
-    // Pkt loss         - ???????????????????????
-    // Data Sent [MB]  -
-    // Pkt Err.[%]
-    // Transfer Time [ms]
-    // Throughput [MBps]  [Mbps] [pps]
-    /*     printf("\n[SUMMARY RUN %d/%d]\n", i + 1, repetitions);
-           printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(block_size));
-           printf("  Protocol:           IPv4\n");
-           printf("  Packet Length:      %d bytes\n", pkt_payload_size);
-           printf("  Header:             %d bytes\n", pkt_header_size);
-           printf("  Efficiency:         %.3f %%\n", efficiency);
-           printf("  Pkts to send:     %.3f\n", pkts_to_send); // numero pacchetti da inviare
-           */
-} test_outs;
+
+    int pkts_to_send; // Pkts to send   - trunc(blocksize / packet_payload) + (blocksize % packet_payload)
+    int pkts_sent;    // Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
+    int pkts_loss;    // Pkt loss       - ???????????????????????
+    int data_sent;    // Data Sent [MB] -
+
+    long int test_time;       // Transfer Time [ms]
+    long int test_throughput; // Throughput [MBps]  [Mbps] [pps]
+    double err_pkts_p;        //   // Pkt Err.[%]
+
+} model_data;
 
 enum
 {
@@ -36,8 +37,12 @@ enum
                       // ....
 } frm_stuffs_e;
 
-// #define _FORMAT_CSV_HEADER 1
+// -------------------------------------------------------------------------------------------------------- !
+ret_t ipv4tcp_bandwidth(int ifn); // computes bandwidth for local interface
+{
+}
 
+// -------------------------------------------------------------------------------------------------------- !
 void print_outs(out_bandwidth_ipv4_tcp_t *_pout, frm_stuffs_e _switch)
 {
     switch
@@ -103,8 +108,33 @@ void print_outs(out_bandwidth_ipv4_tcp_t *_pout, frm_stuffs_e _switch)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-int ipv4tcp_preset()
+ret_c ipv4tcp_preset()
 {
+    char ip[64];
+    int port;
+    const char *host = test->remote_addr;
+    const char *colon = strchr(host, ':');
+    if (colon == NULL)
+    {
+        fprintf(stderr, "[CLIENT] Invalid host format. Use IP:PORT\n");
+        return;
+    }
+
+    size_t ip_len = colon - host;
+    strncpy(ip, host, ip_len);
+    ip[ip_len] = '\0';
+    port = atoi(colon + 1);
+
+    if (port < MIN_PORT || port > MAX_PORT)
+    {
+        fprintf(stderr, "[CLIENT] Invalid port number: %d\n", port);
+        return;
+    }
+
+    if (!test->csv_format) // verbose mode options !!!
+    {
+        printf("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
+    }
 
     if (__flag_output_csv && csv_no_header)
     {
@@ -113,14 +143,15 @@ int ipv4tcp_preset()
 
     for (int i = 0; i < repetitions; i++)
     {
-
         // related to model's stuffs
-        int mss = 0; // packet's payload size
         int pkt_payload_size;
         int pkt_header_size = 40; // TCP/IP standard header
-        char *pkt_payload;
+
         double efficiency;
         double pkts_to_send;
+
+        int mss = 0; // packet's payload size
+        char *pkt_payload;
 
         int sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -152,7 +183,7 @@ int ipv4tcp_preset()
         }
         else
         {
-            mss = mtu_size - 40;
+            mss = pkt_payload - 40;
         }
 
         // Sets send and receive socket buffers size
@@ -171,15 +202,11 @@ int ipv4tcp_preset()
         if (i == 0 && csv_enabled == 1)
             fprintf(csv, "Timestamp_ms,Num Pkt,Dimensione Pkt,Throughput_MBps,RTT_ms\n");
 
-
-
         char ping_msg[] = "PING";
         char pong_msg[5] = {0};
 
         double rtt_ms = 0;
-
         double ping_start = get_time_microseconds();
-
         if (send(sock, ping_msg, sizeof(ping_msg), 0) != sizeof(ping_msg))
         {
             perror("[CLIENT] Error sending PING");
@@ -202,7 +229,6 @@ int ipv4tcp_preset()
         */
 
         /// computes number of packet will be sended
-
         pkt_payload_size = (mss < block_size) ? mss : block_size;
         pkt_payload = (char *)malloc(pkt_payload_size);
         memset(pkt_payload, 'A', pkt_payload_size);
@@ -217,13 +243,11 @@ int ipv4tcp_preset()
         {
             print_outs(&test_outs, _OUTS_ONELINE);
         }
-
         // printf("[CLIENT] Sending %ld bytes in chunks of %d bytes...\n", block_size, chunk_size);
 
         int pkts_counter = 0;
         int bytes_sent = 0;
-
-        unsigned int interval_us = 0; // Interval between packets (1ms)
+        // unsigned int interval_us = 0; // Interval between packets (1ms)
 
         dsperf_timer_t *timer = dsperf_timer_create(interval_us);
         double start_time = get_time_microseconds();
@@ -232,43 +256,36 @@ int ipv4tcp_preset()
 
         double start_time_def = get_time_microseconds();
         double end_time_def = start_time + time * 1e6; // 'time' è in secondi
-
         double curr_time = start_time_def;
-
         ssize_t sent;
     }
 }
 
-
 // -------------------------------------------------------------------------------------------------------- !
-void run_bandwidth_ipv4_tcp_client(program_args_t *_test, const char *_server_ip, int _server_port)
+// throughput
+ret_t run_ipv4_tcp_client(options_t *_test, const char *_server_ip, int _server_port)
 {
     size_t block_size = _test->block_size;
-    size_t mtu = _test->mtu_size;
+    size_t mtu = _test->pkt_payload;
     const char *csv_path = _test->csv_path;
     int repetitions = _test->repetitions;
     bool __flag_output_csv = _test->csv_format;
     bool csv_no_header = _test->csv_no_header;
     bool mtu_defined = _test->mtu_defined;
-    int mtu_size = _test->mtu_size;
+    int pkt_payload = _test->pkt_payload;
     int time = _test->time;
     bool __flag_time_defined = _test->time_defined;
+    const uint64_t target_bitrate_bps = 10 * 1024 * 1024 * 8; // 10 Mbps (Megabits) _10Mps
 
-    const uint64_t target_bitrate_bps = 10 * 1000 * 1000; // 10 Mbps (Megabits)
-}
-
-// -------------------------------------------------------------------------------------------------------- !
-// Main sending cycle !!!!!!
-int ipv4tcp_cycle_send()
-{
     int to_send;
+
+    ipv4tcp_preset();
 
     if (__flag_time_defined) // Runs in time-mode
     {
         // curr_time < end_time_def
         while ((curr_time < end_time_def))
         {
-
             to_send = pkt_payload_size;
             if (send(sock, pkt_payload, to_send, 0) > 0)
                 break;
@@ -277,9 +294,9 @@ int ipv4tcp_cycle_send()
     }
     else // runs in block-size mode
     {
+
         while ((bytes_sent < block_size))
         {
-
             if (!dsperf_timer_wait_tick(timer)) // Semaphore
             {
                 break;
@@ -291,7 +308,6 @@ int ipv4tcp_cycle_send()
             // to_send = pkt_payload_size;
             if ((sent = send(sock, pkt_payload, pkt_payload_size, 0)) <= 0)
                 break;
-
             bytes_sent += sent;
             pkts_counter++;
         }
@@ -306,10 +322,11 @@ int ipv4tcp_cycle_send()
     double elapsed_s = elapsed_ms / 1000;
 
     // Dopo aver effettuato il test, posso ottenere il numero di pacchetti persi soltanto ricevendo il numero effettivo che ha raggiunto il server
-    // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!! ( per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket!!!)
+    // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!!
+    (per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket !!!)
 
-    double out_throughput_Mbytes = (_Byte2Megabyte(bytes_sent) / (double)elapsed_s); // / (elapsed_ms / (double)1000); // Ottengo Mega byte per secondo
-    double out_throughput_Mbits = out_throughput_Mbytes * (double)8;                 // Ottengo Mega bit per secondo
+        double out_throughput_Mbytes = (_Byte2Megabyte(bytes_sent) / (double)elapsed_s); // / (elapsed_ms / (double)1000); // Ottengo Mega byte per secondo
+    double out_throughput_Mbits = out_throughput_Mbytes * (double)8;                     // Ottengo Mega bit per secondo
     double out_throughput_pps = (double)pkts_counter / elapsed_s;
 
     int out_bytes_to_send = block_size; // Total byte to send
@@ -325,12 +342,6 @@ int ipv4tcp_cycle_send()
     {
         print_outs(&test_outs, _OUTS_SUMMARY);
     }
-}
-
-// -------------------------------------------------------------------------------------------------------- !
-
-int ipv4tcp_unset()
-{
 
     free(pkt_payload);
     close(sock);
@@ -341,15 +352,13 @@ int ipv4tcp_unset()
     // usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
 }
 
-
 // -------------------------------------------------------------------------------------------------------- !
-void run_bandwidth_ipv4_tcp_server(int port)
+ret_t run_ipv4_tcp_server(int port)
 {
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0)
     {
-        perror("socket");
-        return;
+        return -1;
     }
 
     int opt = 1;
@@ -433,7 +442,7 @@ void run_bandwidth_ipv4_tcp_server(int port)
 
         while (1)
         {
-            ssize_t recvd = recv(client_sock, buffer, mss > 0 ? mss : 2048, 0);
+            ssize_t recvd = recv(client_sock, buffer, mss > 0 ? mss : 2048, 0); // Negozia 2048 ?
             if (recvd <= 0)
                 break;
             total_received += recvd;
@@ -445,10 +454,8 @@ void run_bandwidth_ipv4_tcp_server(int port)
 
         printf("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n",
                run_count, seconds, total_received, throughput);
-
         free(buffer);
         close(client_sock);
     }
-
     close(server_sock);
 }

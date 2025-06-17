@@ -52,7 +52,6 @@ const char* get_architecture();
 const char* get_kernel_version();
 
 
-
 // ------------------------
 // CPU INFO
 // ------------------------
