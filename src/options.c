@@ -1,5 +1,12 @@
 
 #include "options.h"
+#include <ctype.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+
+
+static options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 void print_usage(const char *prog_name)
@@ -32,24 +39,25 @@ void print_options(const char *prog_name)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t parse_args(int argc, char *argv[], options_t *_settings)
+ret_t parse_args(int argc, char *argv[])
 {
-    memset(_settings, 0, sizeof(*_settings));
-    _settings->host_role = -1;
-    _settings->model = -1;
-    _settings->block_size = 0;
-    _settings->mtu_defined = false;
-    _settings->pkt_payload = 1500;
-    _settings->repetitions = 1;
-    _settings->pack_num = 1;
-    _settings->csv_enabled = false;
-    _settings->csv_no_header = false;
-    _settings->version = false;
-    _settings->port = 0;
-    _settings->remote_din = -1;
-    _settings->remote_addr[0] = '\0';
-    _settings->model_path[0] = '\0';
-    _settings->csv_path[0] = '\0';
+
+    memset(&Settings, 0, sizeof(&Settings));
+    Settings.host_role = -1;
+    Settings.model = -1;
+    Settings.block_size = 0;
+    Settings.mtu_specified = false;
+    Settings.pkt_payload = 1500;
+    Settings.repetitions = 1;
+    Settings.pack_num = 1;
+    Settings.csv_enabled = false;
+    Settings.csv_no_header = false;
+    Settings.version = false;
+    Settings.port = 0;
+    Settings.remote_din = -1;
+    Settings.remote_addr[0] = '\0';
+    Settings.model_path[0] = '\0';
+    Settings.csv_path[0] = '\0';
 
     static struct option long_options[] = {
         {"underlay", no_argument, 0, 1},
@@ -65,25 +73,25 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
         switch (c)
         {
         case 'S':
-            if (_settings->host_role != -1)
+            if (Settings.host_role != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both -S and -s\n");
                 exit(EXIT_FAILURE);
             }
-            _settings->host_role = 0;
-            if (_settings->model == 0)
+            Settings.host_role = 0;
+            if (Settings.model == 0)
             { // underlay: PORT
-                _settings->port = atoi(optarg);
-                if (_settings->port <= 0)
+                Settings.port = atoi(optarg);
+                if (Settings.port <= 0)
                 {
                     fprintf(stderr, "Error: Invalid port number for server\n");
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (_settings->model == 1)
+            else if (Settings.model == 1)
             {
-                _settings->remote_din = atoi(optarg);
-                if (_settings->remote_din < 0)
+                Settings.remote_din = atoi(optarg);
+                if (Settings.remote_din < 0)
                 {
                     fprintf(stderr, "Error: Invalid DIN for server\n");
                     exit(EXIT_FAILURE);
@@ -94,25 +102,25 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
                 // Layer mode non ancora definito: salvare comunque arg e fare check dopo
                 // Conserviamo il valore provvisorio in remote_addr o remote_din, controlliamo in validate
                 // Per semplicità: useremo remote_addr come buffer temporaneo per il valore
-                strncpy(_settings->remote_addr, optarg, sizeof(_settings->remote_addr) - 1);
+                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
             }
             break;
 
         case 's':
-            if (_settings->host_role != -1)
+            if (Settings.host_role != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both -S and -s\n");
                 exit(EXIT_FAILURE);
             }
-            _settings->host_role = 1;
-            if (_settings->model == 0)
+            Settings.host_role = 1;
+            if (Settings.model == 0)
             { // underlay: IP:PORT
-                strncpy(_settings->remote_addr, optarg, sizeof(_settings->remote_addr) - 1);
+                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
             }
-            else if (_settings->model == 1)
+            else if (Settings.model == 1)
             {
-                _settings->remote_din = atoi(optarg);
-                if (_settings->remote_din < 0)
+                Settings.remote_din = atoi(optarg);
+                if (Settings.remote_din < 0)
                 {
                     fprintf(stderr, "Error: Invalid DIN for client\n");
                     exit(EXIT_FAILURE);
@@ -121,21 +129,21 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
             else
             {
                 // Layer mode non ancora definito: salvare in remote_addr e validare dopo
-                strncpy(_settings->remote_addr, optarg, sizeof(_settings->remote_addr) - 1);
+                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
             }
             break;
 
         case 'n':
-            _settings->repetitions = atoi(optarg);
-            if (_settings->repetitions < 1)
+            Settings.repetitions = atoi(optarg);
+            if (Settings.repetitions < 1)
             {
                 fprintf(stderr, "Error: repetitions must be >= 1\n");
                 exit(EXIT_FAILURE);
             }
             break;
         case 'c':
-            _settings->pack_num = atoi(optarg);
-            if (_settings->pack_num < 1)
+            Settings.pack_num = atoi(optarg);
+            if (Settings.pack_num < 1)
             {
                 fprintf(stderr, "Error: packet number must be >= 1\n");
                 exit(EXIT_FAILURE);
@@ -143,9 +151,9 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
             break;
 
         case 'm':
-            _settings->mtu_defined = true;
-            _settings->pkt_payload = atoi(optarg);
-            if (_settings->pkt_payload < 1)
+            Settings.mtu_specified = true;
+            Settings.pkt_payload = atoi(optarg);
+            if (Settings.pkt_payload < 1)
             {
                 fprintf(stderr, "Error: MTU must be >= 1\n");
                 exit(EXIT_FAILURE);
@@ -154,22 +162,22 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
 
         case 'f':
         {
-            _settings->csv_enabled = true;
-            strncpy(_settings->csv_path, optarg, sizeof(_settings->csv_path) - 1);
+            Settings.csv_enabled = true;
+            strncpy(Settings.csv_path, optarg, sizeof(Settings.csv_path) - 1);
             break;
         }
 
         case 't':
         {
-            _settings->time_defined = true;
+            Settings.time_defined = true;
             int val = atoi(optarg);
-            _settings->time = val;
+            Settings.time = val;
             break;
         }
         case 'y':
         {
-            _settings->csv_format = true;
-            _settings->csv_no_header = false;
+            Settings.csv_format = true;
+            Settings.csv_no_header = false;
 
             int val = atoi(optarg);
             if (val != 0 && val != 1)
@@ -178,36 +186,36 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
                 exit(EXIT_FAILURE);
             }
 
-            _settings->csv_no_header = (val == 1);
+            Settings.csv_no_header = (val == 1);
         }
         break;
 
         case 'v':
-            _settings->version = true;
+            Settings.version = true;
             break;
 
         case 1: // --underlay
-            if (_settings->model != -1)
+            if (Settings.model != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
                 exit(EXIT_FAILURE);
             }
-            _settings->model = 0;
+            Settings.model = 0;
             break;
 
         case 2: // --daas
-            if (_settings->model != -1)
+            if (Settings.model != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
                 exit(EXIT_FAILURE);
             }
-            _settings->model = 1;
-            strncpy(_settings->model_path, optarg, sizeof(_settings->model_path) - 1);
+            Settings.model = 1;
+            strncpy(Settings.model_path, optarg, sizeof(Settings.model_path) - 1);
             break;
 
         case 3: // --blocksize
-            _settings->block_size = atoi(optarg);
-            if (_settings->block_size < 1)
+            Settings.block_size = atoi(optarg);
+            if (Settings.block_size < 1)
             {
                 fprintf(stderr, "Error: blocksize must be >= 1\n");
                 exit(EXIT_FAILURE);
@@ -222,34 +230,34 @@ ret_t parse_args(int argc, char *argv[], options_t *_settings)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t validate_args(options_t *args, const char *prog_name)
+ret_t validate_args(const char *prog_name)
 {
     // Controlli base
-    if (args->host_role == -1)
+    if (Settings.host_role == -1)
     {
         fprintf(stderr, "Error: Must specify either -S (server) or -s (client)\n");
         return rtExit;
     }
-    if (args->model == -1)
+    if (Settings.model == -1)
     {
         fprintf(stderr, "Error: Must specify either --underlay or --daas\n");
         return rtExit;
     }
 
     // Per server: accetta solo parametri base
-    if (args->host_role == 0)
+    if (Settings.host_role == 0)
     {
         // Se model non è definito, proviamo a dedurlo dall'argomento di -S
-        if (args->model == 0)
+        if (Settings.model == 0)
         {
             // -S deve essere porta
-            if (args->port == 0)
+            if (Settings.port == 0)
             {
                 // Se non settata ancora, proviamo a convertire da remote_addr (tmp)
-                if (args->remote_addr[0] != '\0')
+                if (Settings.remote_addr[0] != '\0')
                 {
-                    args->port = atoi(args->remote_addr);
-                    if (args->port <= 0)
+                    Settings.port = atoi(Settings.remote_addr);
+                    if (Settings.port <= 0)
                     {
                         fprintf(stderr, "Error: Invalid port number for server\n");
                         return rtExit;
@@ -262,15 +270,15 @@ ret_t validate_args(options_t *args, const char *prog_name)
                 }
             }
         }
-        else if (args->model == 1)
+        else if (Settings.model == 1)
         {
             // -S deve essere remote_din
-            if (args->remote_din < 0)
+            if (Settings.remote_din < 0)
             {
-                if (args->remote_addr[0] != '\0')
+                if (Settings.remote_addr[0] != '\0')
                 {
-                    args->remote_din = atoi(args->remote_addr);
-                    if (args->remote_din < 0)
+                    Settings.remote_din = atoi(Settings.remote_addr);
+                    if (Settings.remote_din < 0)
                     {
                         fprintf(stderr, "Error: Invalid DIN for server\n");
                         return rtExit;
@@ -285,27 +293,27 @@ ret_t validate_args(options_t *args, const char *prog_name)
         }
 
         // Verifica che non siano presenti opzioni non ammesse per server
-        if (args->block_size != 0)
+        if (Settings.block_size != 0)
         {
             fprintf(stderr, "Error: Server must not specify --blocksize\n");
             return rtExit;
         }
-        if (args->repetitions != 1)
+        if (Settings.repetitions != 1)
         {
             fprintf(stderr, "Error: Server must not specify -n (repetitions)\n");
             return rtExit;
         }
-        if (args->csv_enabled)
+        if (Settings.csv_enabled)
         {
             fprintf(stderr, "Error: Server must not specify -f (csv output)\n");
             return rtExit;
         }
-        if (args->csv_no_header)
+        if (Settings.csv_no_header)
         {
             fprintf(stderr, "Error: Server must not specify -y (csv header control)\n");
             return rtExit;
         }
-        if (args->mtu_defined)
+        if (Settings.mtu_specified)
         {
             fprintf(stderr, "Error: Server must not specify -m (mtu)\n");
             return rtExit;
@@ -313,27 +321,27 @@ ret_t validate_args(options_t *args, const char *prog_name)
     }
 
     // Per client: deve avere tutti i parametri corretti
-    if (args->host_role == 1)
+    if (Settings.host_role == 1)
     {
         // Verifica model e argomenti collegati
-        if (args->model == 0)
+        if (Settings.model == 0)
         {
             // underlay: remote_addr deve essere IP:PORT
-            if (args->remote_addr[0] == '\0')
+            if (Settings.remote_addr[0] == '\0')
             {
                 fprintf(stderr, "Error: Client must specify IP:PORT for underlay\n");
                 return rtExit;
             }
         }
-        else if (args->model == 1)
+        else if (Settings.model == 1)
         {
             // daas: remote_din >= 0
-            if (args->remote_din < 0)
+            if (Settings.remote_din < 0)
             {
-                if (args->remote_addr[0] != '\0')
+                if (Settings.remote_addr[0] != '\0')
                 {
-                    args->remote_din = atoi(args->remote_addr);
-                    if (args->remote_din < 0)
+                    Settings.remote_din = atoi(Settings.remote_addr);
+                    if (Settings.remote_din < 0)
                     {
                         fprintf(stderr, "Error: Invalid DIN for client\n");
                         return rtExit;
@@ -347,24 +355,24 @@ ret_t validate_args(options_t *args, const char *prog_name)
             }
         }
 
-        if (args->block_size < 1)
+        if (Settings.block_size < 1)
         {
             fprintf(stderr, "Error: Client must specify --blocksize >= 1\n");
             return rtExit;
         }
-        if (args->repetitions < 1)
+        if (Settings.repetitions < 1)
         {
             fprintf(stderr, "Error: repetitions must be >= 1\n");
             return rtExit;
         }
-        if (args->mtu_defined && args->pkt_payload < 1)
+        if (Settings.mtu_specified && Settings.pkt_payload < 1)
         {
             fprintf(stderr, "Error: MTU must be >= 1\n");
             return rtExit;
         }
 
         // csv_path se csv_enabled deve essere valorizzato
-        if (args->csv_enabled && args->csv_path[0] == '\0')
+        if (Settings.csv_enabled && Settings.csv_path[0] == '\0')
         {
             fprintf(stderr, "Error: CSV output enabled but no file specified\n");
             return rtExit;

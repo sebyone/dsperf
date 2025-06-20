@@ -7,42 +7,57 @@
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-
 #include "monitor.h"
-#include "system.h"
-// #include "datetime.h"
 
 Monitor::Monitor(sysgroup_t sysgroup_) : _sysgroup(sysgroup_)
 {
-    // occurrencies = new std::vector<occurrence_t>();
-
-   // Systemx &x = Systemx::Instance(); // singleton instance
-   // x.getNewModuleSerials( this,sysgroup_); //  "Istanza 236");
+    
 }
 
 Monitor::~Monitor()
 {
+
 }
+
+/*  -------------------------------------------------------------------------------------------------------- */
+Fact *Monitor::getFact(syscode_t code_)
+{
+    if ((*it).code != code_) // && sysgroup !!!!!!!!!!!!!
+    {
+        it = s.getFacts()->begin();
+        while (it != s.getFacts()->end() && (*it).code != code_)
+        {
+            it++;
+        }
+    }
+    if ((*it).code == code_)
+    {
+        return &(*it);
+    }
+    return NULL;
+}
+
 /*  -------------------------------------------------------------------------------------------------------- */
 bool Monitor::reload()
 {
-    _statistics.clear();
-    for (auto it = s.getFacts()->begin(); it != s.getFacts()->end(); it++)
-    {
-        if ((*it).group == _sysgroup)
+    /*    s.getFacts()->clear();
+        for (auto it = s.getFacts()->begin(); it != s.getFacts()->end(); it++)
         {
-            occurrence_t occurrenceTmp = {(*it).code, 0, (*it).mode};
-            _statistics.push_back(occurrenceTmp);
+            if ((*it).group == _sysgroup)
+            {
+                fact_t occurrenceTmp = {(*it).code, 0, (*it).mode};
+                s.getFacts()->push_back(occurrenceTmp);
+            }
         }
-    }
+    */
     return true;
 }
 /*  -------------------------------------------------------------------------------------------------------- */
 bool Monitor::resetStatistics(timedata_t now_)
 {
     // Threading ???
-    zerotime = now_;
-    for (auto it = _statistics.begin(); it != _statistics.end(); it++)
+    // zerotime = now_;
+    for (auto it = s.getFacts()->begin(); it != s.getFacts()->end(); it++)
     {
         (*it).value = 0; // reset to Zero
     }
@@ -50,7 +65,7 @@ bool Monitor::resetStatistics(timedata_t now_)
 }
 
 /*  -------------------------------------------------------------------------------------------------------- */
-syscode_t Monitor::addStatisticFact(syscode_t ncode_, statmode_t mode_)
+syscode_t Monitor::addFact(syscode_t ncode_, statmode_t mode_)
 {
     // Threading ???
     if (s.getFacts()->size() > 0)
@@ -70,55 +85,37 @@ syscode_t Monitor::addStatisticFact(syscode_t ncode_, statmode_t mode_)
 }
 
 /*  -------------------------------------------------------------------------------------------------------- */
-std::vector<occurrence_t> *Monitor::getStatistics() // Report
+void Monitor::setValue(syscode_t code_, int data_)
 {
-    return &_statistics;
-}
-
-/*  -------------------------------------------------------------------------------------------------------- */
-void Monitor::setFact(syscode_t code_, int data_)
-{
-    auto it = _statistics.begin();
-    while (it != _statistics.end() && (*it).code != code_)
-    {
-        it++;
-    }
-    if ((*it).code == code_)
+    if (getFact(code_))
     {
         (*it).value = data_; // Update value
     }
 }
 
 /*  -------------------------------------------------------------------------------------------------------- */
-void Monitor::incFact(syscode_t code_)
+void Monitor::incValue(syscode_t code_)
 {
-    this->setFact(code_, 1); // increment by one
-}
-
-/*  -------------------------------------------------------------------------------------------------------- */
-void Monitor::avgFact(syscode_t code_, int data_)
-{
-    auto it = _statistics.begin();
-    while (it != _statistics.end() && (*it).code != code_)
+    if (getFact(code_))
     {
-        it++;
-    }
-    if ((*it).code == code_)
-    {
-        (*it).value = (int)(((*it).value + data_) / 2); // Average truncate !
+        (*it).value++; // increment by one
     }
 }
 
 /*  -------------------------------------------------------------------------------------------------------- */
-void Monitor::sumFact(syscode_t code_, int data_)
+void Monitor::avgValue(syscode_t code_, int data_)
 {
-    auto it = _statistics.begin();
-    while (it != _statistics.end() && (*it).code != code_)
+    if (getFact(code_))
     {
-        it++;
+        (*it).value = (((*it).value + data_) / 2); // Average
     }
-    if ((*it).code == code_)
+}
+
+/*  -------------------------------------------------------------------------------------------------------- */
+void Monitor::sumValue(syscode_t code_, int data_)
+{
+    if (getFact(code_))
     {
-        (*it).value = (*it).value + data_; // Sum !
+        (*it).value += data_; // Sum !
     }
 }

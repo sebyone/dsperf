@@ -1,7 +1,8 @@
+
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
- * File: loopback.c
+ * File: block_runner.h
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -33,80 +34,51 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <stdbool.h>
-#include <stdbool.h>
-#include "version.h"
+#ifndef HARDWARE_H
+#define HARDWARE_H
+
+#pragma once
 
 #include "locals.h"
-#include "options.h"
 
-// Testing modules
-#include "models\model_ipv4tcp.h"
-
-#ifdef WITH_DAAS
-// #include "daas.hpp"
-// #include "daas_types.hpp"
-#include "models\model_daas.h"
-#endif
-
-
-double now_sec()
+// Data Structures for local hardware resources
+//
+typedef struct // local interfaces
 {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec + tv.tv_usec / 1e6;
-}
+    char *ifname;     // name as OS reported "eth", "wlan", ...
+    double bandwidth; // nominal Speed: 50000Mb/s
 
-// -------------------------------------------------------------------------------------------------------- !
-int main(int argc, char *argv[])
-{
-    options_t Settings;
-    parse_args(argc, argv, &Settings);
-    if (validate_args(&Settings, argv[0]) != EXIT_SUCCESS)
-    {
-        return EXIT_FAILURE;
-    }
+    /*
+  $ ethtool eth0
+    Settings for eth0:
+    Supported ports: [ FIBRE ]
+    Supported link modes:   25000baseCR/Full, 50000baseCR2/Full
+    Supported pause frame use: Symmetric Receive-only
+    Supports auto-negotiation: Yes
+    Supported FEC modes: RS	 BASER	 LLRS
+    Advertised link modes:  25000baseCR/Full
+                            50000baseCR2/Full
+    Advertised pause frame use: Symmetric
+    Advertised auto-negotiation: Yes
+    Advertised FEC modes: Not reported
+    Link partner advertised link modes:  Not reported
+    Link partner advertised pause frame use: Symmetric
+    Link partner advertised auto-negotiation: No
+    Link partner advertised FEC modes: Not reported
+    Speed: 50000Mb/s
+    Lanes: 2
+    Duplex: Full
+    Auto-negotiation: on
+    Port: FIBRE
+    PHYAD: 0
+    Transceiver: internal
+    netlink error: Operation not permitted
+    Current message level: 0x00002081 (8321)
+                           drv tx_err hw
+    Link detected: yes
+    */
+} hwif_t;
 
-    switch (Settings.target == 3)
-    {
-    case 3: // throughput (default)
-        switch (Settings.model)
-        {
-        case 0:                          // ipv4/tcp
-            if (Settings.host_role == 0) // 0 = server, 1 = client
-            {
-                run_ipv4tcp_server(Settings.port);
-            }
-            else
-            {
-                run_ipv4tcp_client(&Settings, const char *server_ip, int server_port); // bandwidth
-            };
+ret_t get_interfaces(hwif_t *ifs, int *_lsize); // Returns a list of availaible local interfaces ( )
 
-            break;
-
-        case 1: // daas fresbee
-#ifdef WITH_DAAS
-                // enable node ( if not alredy enabled)
-
-            run_overlay_bandwidth_server(setup);
-            //
-            run_overlay_bandwidth_client(setup, test);
-#else
-                // print library not available
-#endif
-            break;
-
-        case 2: // ipv4/icmp (ping)
-            // set enviroment
-            // run test tcp
-
-            break;
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
+#endif // HARDWARE_H

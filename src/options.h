@@ -8,14 +8,10 @@
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
  * Disclaimer of Warrant
- * Covered Software is provided under this License on an "as is" basis, without warranty of any kind, either
- * expressed, implied, or statutory, including, without limitation, warranties that the Covered  Software is
- * free of defects, merchantable, fit for a particular purpose or non-infringing.
- * The entire risk as to the quality and performance of the Covered Software is with You.  Should any Covered
- * Software prove defective in any respect, You (not any Contributor) assume the cost of any necessary
- * servicing, repair, or correction.
- * This disclaimer of warranty constitutes an essential part of this License.  No use of any Covered Software
- * is authorized under this License except under this disclaimer.
+ * Covered Software is provided under this License on an "as is" basis, without warranty of any kind.
+ * The entire risk as to the quality and performance of the Covered Software is with You.
+ * This disclaimer of warranty constitutes an essential part of this License.
+ * No use of any Covered Software is authorized under this License except under this disclaimer.
  *
  * Limitation of Liability
  * Under no circumstances and under no legal theory, whether tort (including negligence), contract, or otherwise,
@@ -34,57 +30,26 @@
  *
  */
 
-#ifndef DSPERF_LOCALS_H
-#define DSPERF_LOCALS_H
-
-#pragma once
-
-#if defined(__linux__) || defined(__RASP__)
-#include <unistd.h>
-#include <getopt.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <arpa/inet.h>
-#include <sys/time.h>
-#endif
+#ifndef OPTIONS_H
+#define OPTIONS_H
 
 #include <ctype.h>
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <stdbool.h>
 
-// Configure
-#define WITH_DAAS
+#include "locals.h"
 
-#define MAX_LINE_LEN 256
-#define MAX_LINKS 5
-#define MAX_REMOTE_LINKS 64
-#define LINK_MAX_VAL 6
+#include "models\model_ipv4tcp.h"
+#include "models\model_daasfrs.h"
 
-//
-#define MIN_BLOCK_SIZE 1
-#define MAX_BLOCK_SIZE (1024 * 1024 * 1024) // 1GB
-#define MIN_PACKET_SIZE 1
-#define MAX_PACKET_SIZE (10 * 1024 * 1024) // 10MB
+#pragma once
 
-// ipv4_tcp
-#define MIN_PORT 1
-#define MAX_PORT 65535
-
-typedef enum : unsigned short // Functions return code
-{
-    rtOK = 0,   // No error
-    rtExit = 1, // stdlib EXIT_FAILURE 1
-    rtErr = 2  // Generic error
-}
-ret_t;
-
-// Data Structures for Overlay Setup.
+// cli args _____________________________________________________________
 
 typedef struct
 {
-
-    int target;      // -1 = unset, 1 = capabilities, 2 = availability, 3 = throughput, 4 = security
     int model;       // -1 = unset,
                      // 3:0 = ipv4_tcp (method flow&time for throughput test)
                      // 3:1 = daas
@@ -102,7 +67,7 @@ typedef struct
     long int block_size; // traffic block size  (needs to be supported by model)
     int pkt_payload;     // payload size (needs to be supported by model)
 
-    bool mtu_defined; // ???
+    bool mtu_specified; // ???
     int pack_num;     // ???
 
     int port;              // server con underlay: porta di ascolto
@@ -120,8 +85,8 @@ void print_usage(const char *prog_name);
 
 void print_options(const char *prog_name);
 
-ret_t parse_args(int argc, char *argv[], options_t *args);
+ret_t parse_args(int argc, char *argv[]);
 
-ret_t validate_args(options_t *args, const char *prog_name);
+ret_t validate_args(const char *prog_name);
 
-#endif // DSPERF_LOCALS_H
+#endif // OPTIONS_H

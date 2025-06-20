@@ -33,9 +33,10 @@
  *
  */
 
-#ifndef HELPERS_H
-#define HELPERS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #define _Byte2Megabyte(b) ((double)(b) / (1 << 20))
+#define _Byte2Megabits(b) ((double)(b*8) / (1 << 20))
 
-#endif // HELPERS_H
+#endif // UTILS_H

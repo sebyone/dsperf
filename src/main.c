@@ -1,7 +1,7 @@
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
- * File: block_runner.h
+ * File: loopback.c
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -33,36 +33,78 @@
  *
  */
 
-// DaaS Protocol
-//
-// Daas Fresbee service API
-// -----------------------------------------------------
-// .
-// ...
+#include "version.h"
 
-#ifndef MODEL_DAAS_H
-#define MODEL_DAAS_H
+#include "locals.h"
+#include "options.h"
+// #include "helpers/monitor.h"
 
-#define TEST_MODEL_NAME "DaaS"
+extern Settings; // options_t Settings;
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
+// -------------------------------------------------------------------------------------------------------- !
+int main(int argc, char *argv[])
+{
 
-#include "../dsperf_locals.h"
+    parse_args(argc, argv);
+    if (validate_args(argv[0]) != rtOk)
+    {
+        return EXIT_FAILURE;
+    }
 
-// DaaS node stack - libdaas
-#include "daas.hpp"
-#include "daas_types.hpp"
+    switch (Settings.model)
+    {
 
-void run_bandwidth_daas_client(daas_setup_t *setup, options_t *test);
-void run_bandwidth_daas_server(daas_setup_t *setup);
+#ifdef TEST_IPV4TCP
+    case TEST_IPV4TCP: // TEST_CLASS_CAPACITY, MODEL: ipv4/tcp
+        if (check_ipv4tcp())
+        {
+            if (Settings.host_role == 0) // 0 = server, 1 = client
+            {
+                run_ipv4tcp_server(Settings.port);
+            }
+            else
+            {
+                run_ipv4tcp_client(&Settings, Settings.remote_addr, Settings.port); // bandwidth
+            };
+            return EXIT_SUCCESS;
+        }
+        break;
+#endif
+#ifdef TEST_IPV4UDP
+    case 2:                          // MODEL: ipv4/udp
+        if (Settings.host_role == 0) // 0 = server, 1 = client
+        {
+            run_ipv4udp_server(Settings.port);
+        }
+        else
+        {
+            run_ipv4udp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+        };
+        return EXIT_SUCCESS;
+        break;
+#endif
+#ifdef WITH_DAAS
+    case 7:                          // daas fresbee
+        if (Settings.host_role == 0) // 0 = server, 1 = client
+        {
+            run_ipv4tcp_server(Settings.port);
+        }
+        else
+        {
+            run_ipv4tcp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+        };
+        return EXIT_SUCCESS;
+        break;
+#endif
+    case 8: // ipv4/icmp (ping)
+        // set enviroment
+        // run test tcp
 
-#endif // MODEL_DAAS_H
+        break;
+
+    default:
+        // print out test not available !!!
+    }
+
+    return EXIT_FAILURE;
+}
