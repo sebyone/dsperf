@@ -265,6 +265,7 @@ ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
 
     free(packet);
     close(sock);
+    return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !

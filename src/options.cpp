@@ -226,6 +226,7 @@ ret_t parse_args(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
+    return rtOk;
 }
 
 

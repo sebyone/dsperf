@@ -47,8 +47,8 @@ typedef enum : unsigned
 class Fact // statistic stuff
 {
 public:
-    Fact(sysgroup_t group_, syscode_t code_, unsigned mode_);
-    ~Fact();
+    Fact(sysgroup_t group_, syscode_t code_, unsigned mode_) { }
+    ~Fact() { }
     sysgroup_t group;
     syscode_t code;
     std::string title;

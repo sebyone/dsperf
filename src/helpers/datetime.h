@@ -24,24 +24,9 @@ typedef long timedata_t;
 static struct timeval __tv;
 static struct timespec __ts;
 
-double now_in_seconds()
-{
-    gettimeofday(&__tv, NULL);
-    return __tv.tv_sec + (__tv.tv_usec / 1000000.0);
-}
-
-double get_time_microseconds()
-{
-    clock_gettime(CLOCK_MONOTONIC, &__ts);
-    return __ts.tv_sec * 1e6 + __ts.tv_nsec / 1000;
-}
-
-double now_sec()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec + tv.tv_usec / 1e6;
-}
+double now_in_seconds();
+double get_time_microseconds();
+double now_sec();
 
 /*
 double now_in_seconds()
