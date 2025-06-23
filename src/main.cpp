@@ -1,7 +1,7 @@
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
- * File: block_runner.h
+ * File: loopback.c
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -33,21 +33,79 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
+#include "version.h"
+#include "options.h"
 
-#include "helpers.h"
-//#include <sys/time.h>
-//#include <time.h>
+options_t Settings; // options_t Settings;
 
-void run_block_client(const char *ip, int port, size_t block_size, size_t mtu, const char *csv_file, int repetitions, bool formatting_output_csv);
+// -------------------------------------------------------------------------------------------------------- !
+int main(int argc, char *argv[])
+{
+    parse_args(argc, argv);
 
-void run_block_server(int port);
+    if (validate_args(argv[0]) != rtOk)
+    {
+        return EXIT_FAILURE;
+    }
+
+    switch (Settings.model)
+    {
+
+#ifdef TEST_IPV4TCP
+    case TEST_IPV4TCP: // TEST_CLASS_CAPACITY, MODEL: ipv4/tcp
+        if (check_ipv4tcp())
+        {
+            if (Settings.host_role == 0) // 0 = server, 1 = client
+            {
+                run_ipv4tcp_server(Settings.port);
+            }
+            else
+            {
+                run_ipv4tcp_client(Settings.remote_addr, Settings.port); // bandwidth
+            };
+            return EXIT_SUCCESS;
+        }
+        break;
+#endif // TEST_IPV4TCP
+
+#ifdef TEST_IPV4UDP
+    case 2:                          // MODEL: ipv4/udp
+        if (Settings.host_role == 0) // 0 = server, 1 = client
+        {
+            run_ipv4udp_server(Settings.port);
+        }
+        else
+        {
+            run_ipv4udp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+        };
+        return EXIT_SUCCESS;
+        break;
+#endif // TEST_IPV4UDP
+
+#ifdef WITH_DAAS
+    case 7:                          // daas fresbee
+        if (Settings.host_role == 0) // 0 = server, 1 = client
+        {
+            run_ipv4tcp_server(Settings.port);
+        }
+        else
+        {
+            run_ipv4tcp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+        };
+        return EXIT_SUCCESS;
+        break;
+#endif // WITH_DAAS
+
+    case 8: // ipv4/icmp (ping)
+        // set enviroment
+        // run test tcp
+
+        break;
+
+    default:
+        // print out test not available !!!
+        break;
+    }
+
+    return EXIT_FAILURE;
+}

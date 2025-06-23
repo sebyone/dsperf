@@ -68,7 +68,7 @@ typedef struct
     int pkt_payload;     // payload size (needs to be supported by model)
 
     bool mtu_specified; // ???
-    int pack_num;     // ???
+    int pack_num;       // ???
 
     int port;              // server con underlay: porta di ascolto
     char remote_addr[256]; // client con underlay: IP:PORT stringa
@@ -81,6 +81,8 @@ typedef struct
     bool version;
 } options_t;
 
+extern options_t Settings;
+
 void print_usage(const char *prog_name);
 
 void print_options(const char *prog_name);
@@ -89,5 +91,4 @@ ret_t parse_args(int argc, char *argv[]);
 
 ret_t validate_args(const char *prog_name);
 
-extern options_t Settings;
 #endif // OPTIONS_H

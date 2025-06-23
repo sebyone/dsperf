@@ -53,11 +53,10 @@
 #define TEST_MODEL_INFO "Throughput/Bandwidth v.01a"
 #define TEST_MODEL_LINK "developers@sebyone.it"
 
-#include "locals.h"
-#include "options.h"
-#include "hardware.h"
-#include "utils.h"
-
+#include "../locals.h"
+#include "../options.h"
+#include "../hardware.h"
+#include "../utils.h"
 
 
 // Model Indicators 

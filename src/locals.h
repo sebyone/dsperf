@@ -58,7 +58,7 @@ typedef enum
     rtErr = 2   // Generic error
 } ret_t;
 
-#if defined(__linux__) || defined(__RASP__)
+#if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/types.h>

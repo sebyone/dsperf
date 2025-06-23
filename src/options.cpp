@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdio.h>
 
-
 extern options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
@@ -229,6 +228,7 @@ ret_t parse_args(int argc, char *argv[])
     }
 }
 
+
 // -------------------------------------------------------------------------------------------------------- !
 ret_t validate_args(const char *prog_name)
 {
@@ -379,5 +379,5 @@ ret_t validate_args(const char *prog_name)
         }
     }
 
-    return EXIT_SUCCESS;
+    return rtOk;
 }

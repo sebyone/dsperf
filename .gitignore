@@ -3,4 +3,14 @@
 *.exe
 .DS_Store
 desktop.ini
+cmakebuild
+build
+bin
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+
+
 
