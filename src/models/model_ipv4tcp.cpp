@@ -9,9 +9,9 @@
 #include <netinet/in.h>
 #endif
 #include <math.h>
-#include "options.h"
-#include "helpers/timer.h"
-#include "helpers/datetime.h"
+#include "../options.h"
+#include "../helpers/timer.h"
+#include "../helpers/datetime.h"
 //extern Settings; // options_t Settings;
 double vars[13]; // computed values for enum ipv4tcp_vars
 

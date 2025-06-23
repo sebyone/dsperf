@@ -15,9 +15,9 @@ typedef long timedata_t;
 
 // -------------------------------------------------------------------------------------------------------- !
 
-// #include <time.h>
-// #include "../timer.h"
-// #include <sys/time.h>
+#include <time.h>
+#include "timer.h"
+#include <sys/time.h>
 
 typedef long timedata_t;
 

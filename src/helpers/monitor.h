@@ -23,6 +23,7 @@
 //#include <cstdint>
 #include <stdint.h>
 #include <string.h>
+#include <string>
 #include <list>
 #include <vector>
 
@@ -89,6 +90,7 @@ public:
 
     const sysgroup_t _sysgroup; // local system group
 
+    syscode_t addFact(syscode_t ncode_, statmode_t mode_);
     syscode_t addFact(syscode_t code_, std::string title_); // to local sysgroup_
     syscode_t addFact(syscode_t code_, double value_);
     syscode_t addFact(syscode_t code_, std::string title_, double value_);
@@ -103,7 +105,7 @@ public:
     void sumValue(syscode_t code_, int data_);
 
     bool resetStatistics(timedata_t now_);
-    // bool reload();
+    bool reload();
 
 private:
     Statistics &s = Statistics::Instance(); // singleton instance

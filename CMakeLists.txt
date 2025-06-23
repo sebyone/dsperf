@@ -34,15 +34,18 @@ configure_file(
     @ONLY
 )
 
+file(GLOB_RECURSE SRC_FILES "${SRC_DIR}/*.cpp" "${SRC_DIR}/.h" )
+
 #target_sources(some_target PRIVATE more_cool_stuff.cpp)
 
 # add_library(dsperf )
 add_executable(dsperf src/main.cpp)
 
-target_sources(dsperf PRIVATE ${SRC_DIR}/hardware.cpp)
+
+target_sources(dsperf PRIVATE ${SRC_FILES})
 #add_subdirectory(src) require CmakeList.txt
 
-file(GLOB_RECURSE SOURCES ".cpp" ".h" )
+
 
 # Main sources
 #set(SRC_FILES

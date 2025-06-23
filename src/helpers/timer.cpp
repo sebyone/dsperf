@@ -44,7 +44,7 @@ static void *dsperf_timer_thread_func(void *arg)
 
 dsperf_timer_t *dsperf_timer_create(unsigned int interval_us)
 {
-    dsperf_timer_t *t = malloc(sizeof(dsperf_timer_t));
+    dsperf_timer_t *t = (dsperf_timer_t *)malloc(sizeof(dsperf_timer_t));
     if (!t)
         return NULL;
 
