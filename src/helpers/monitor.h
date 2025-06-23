@@ -20,8 +20,9 @@
 
 */
 
-#include <cstdint>
-#include <string>
+//#include <cstdint>
+#include <stdint.h>
+#include <string.h>
 #include <list>
 #include <vector>
 

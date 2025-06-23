@@ -8,8 +8,11 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #endif
-
-extern Settings; // options_t Settings;
+#include <math.h>
+#include "options.h"
+#include "helpers/timer.h"
+#include "helpers/datetime.h"
+//extern Settings; // options_t Settings;
 double vars[13]; // computed values for enum ipv4tcp_vars
 
 /*
@@ -48,8 +51,7 @@ typedef enum
 
 // -------------------------------------------------------------------------------------------------------- !
 ret_t ipv4tcp_bandwidth(int ifn); // computes bandwidth for local interface
-{
-}
+
 
 // -------------------------------------------------------------------------------------------------------- !
 void print_outs(frm_stuffs_e _switch)
@@ -90,10 +92,11 @@ void print_outs(frm_stuffs_e _switch)
         break;
 
     case _OUTS_SUMMARY:
-        printf("\n[SUMMARY RUN %d/%d]\n", i + 1, vars[_tstcounter]);
+        printf("\n[SUMMARY RUN %d/%d]\n", (int)vars[_tstcounter], (int)vars[_tstcounter]);
+
         printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(vars[_blocksize]));
         printf("  Protocol:           %s\n", TEST_MODEL_NAME);
-        printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
+        //printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
         printf("  Header:             %d bytes\n", vars[_pktheader]);
         printf("  Efficiency:         %.3f %%\n", vars[_efficiency]);
         printf("  Pkts to send:     %.3f\n", vars[_pktstosend]); // numero pacchetti da inviare
@@ -121,12 +124,12 @@ ret_t check_ipv4tcp()
 {
     char ip[64];
     int port;
-    const char *host = test->remote_addr;
+    const char *host = Settings.remote_addr;
     const char *colon = strchr(host, ':');
     if (colon == NULL)
     {
         fprintf(stderr, "[CLIENT] Invalid host format. Use IP:PORT\n");
-        return;
+        return rtErr;
     }
 
     size_t ip_len = colon - host;
@@ -137,24 +140,24 @@ ret_t check_ipv4tcp()
     if (port < MIN_PORT || port > MAX_PORT)
     {
         fprintf(stderr, "[CLIENT] Invalid port number: %d\n", port);
-        return retErr;
+        return rtErr;
     }
 
-    if (!Settings->csv_format) // verbose mode options !!!
+    if (!Settings.csv_format) // verbose mode options !!!
     {
         pverbose("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
     }
-   return retOk; 
+   return rtOk; 
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_ipv4_tcp_client(const char *_server_ip, int _server_port)
+ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
 {
     // size_t block_size = _test->block_size;
     // size_t mtu = _test->pkt_payload;
 
-    // int time = Settings->time;
-    // bool __flag_time_defined = Settings->time_defined;
+    // int time = Settings.time;
+    // bool __flag_time_defined = Settings.time_defined;
 
     // Bandwidth ?????????????????????????
     // const uint64_t target_bitrate_bps = 10 * 1024 * 1024 * 8; // 10 Mbps (Megabits) _10Mps
@@ -192,7 +195,7 @@ ret_t run_ipv4_tcp_client(const char *_server_ip, int _server_port)
 
     socklen_t optlen = sizeof(vars[_pktpayload]); // mss = PAYLOAD !!!!!!!!!!!!!
 
-    if (!Settings->mtu_specified)
+    if (!Settings.mtu_specified)
     {
         getsockopt(sock, IPPROTO_TCP, TCP_MAXSEG, &vars[_pktpayload], &optlen);
         vars[_pktheader] = 40;
@@ -205,13 +208,13 @@ ret_t run_ipv4_tcp_client(const char *_server_ip, int _server_port)
     }
 
     /// computes number of packets will be sended and protocol efficiency
-    if (vars[_pktpayload] >= block_size)
+    if (vars[_pktpayload] >= Settings.block_size)
     {
         vars[_pktstosend] = 1;
     }
     else
     {
-        vars[_pktstosend] = trunc(block_size / vars[_pktpayload]) + (block_size % (int)vars[_pktpayload]);
+        vars[_pktstosend] = trunc(Settings.block_size / vars[_pktpayload]) + (Settings.block_size % (int)vars[_pktpayload]);
     }
     vars[_efficiency] = vars[_pktpayload] / (vars[_pktpayload] + vars[_pktheader]) * 100.0;
 
@@ -220,13 +223,13 @@ ret_t run_ipv4_tcp_client(const char *_server_ip, int _server_port)
     memset(packet, 'A', (int)vars[_pktpayload]);
 
     // Performs one or many tests...
-    if (Settings->csv_format && !Settings->csv_no_header)
+    if (Settings.csv_format && !Settings.csv_no_header)
     {
         print_outs(_OUTS_CSV_HEADER);
     }
 
     vars[_tstcounter] = 0;
-    while (vars[_tstcounter]++ < Settings->repetitions)
+    while (vars[_tstcounter]++ < Settings.repetitions)
     {
         vars[_pktssent] = 0;
         int bytes2send = vars[_blocksize];
@@ -250,7 +253,7 @@ ret_t run_ipv4_tcp_client(const char *_server_ip, int _server_port)
         vars[_throughput] = _Byte2Megabits(vars[_datasent]) / vars[_ttime] / 1000; // [Mbps]
 
         // Prints out vars
-        if (Settings->csv_format)
+        if (Settings.csv_format)
         {
             print_outs(_OUTS_SUMMARY);
         }
@@ -272,13 +275,14 @@ ret_t run_ipv4tcp_server(int port)
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock < 0)
     {
-        return -1;
+        return rtErr;
     }
 
     int opt = 1;
     setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    struct sockaddr_in addr{};
+    struct sockaddr_in addr;
+    memset(&addr,0,sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;
@@ -287,14 +291,14 @@ ret_t run_ipv4tcp_server(int port)
     {
         perror("bind");
         close(server_sock);
-        return;
+        return rtErr;
     }
 
     if (listen(server_sock, 1) < 0)
     {
         pverbose("Socket listen");
         close(server_sock);
-        return;
+        return rtOk;
     }
 
     pverbose("[SERVER] In ascolto sulla porta %d...\n", port);
@@ -437,7 +441,7 @@ ret_t run_ipv4tcp_server(int port)
     */
 // usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
 
-*/
+
 
     /* Solo se flag selezionato !!!!!!!
     FILE *csv = fopen(csv_path, i == 0 ? "w" : "a");

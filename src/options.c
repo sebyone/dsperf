@@ -1,12 +1,12 @@
 
 #include "options.h"
 #include <ctype.h>
-#include <cstdlib>
-#include <cstring>
-#include <cstdio>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 
-static options_t Settings;
+extern options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 void print_usage(const char *prog_name)

@@ -34,15 +34,15 @@
 #define OPTIONS_H
 
 #include <ctype.h>
-#include <cstdlib>
-#include <cstring>
-#include <cstdio>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 #include "locals.h"
 
-#include "models\model_ipv4tcp.h"
-#include "models\model_daasfrs.h"
+#include "models/model_ipv4tcp.h"
+#include "models/model_daasfrs.h"
 
 #pragma once
 
@@ -89,4 +89,5 @@ ret_t parse_args(int argc, char *argv[]);
 
 ret_t validate_args(const char *prog_name);
 
+extern options_t Settings;
 #endif // OPTIONS_H

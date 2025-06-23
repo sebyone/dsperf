@@ -39,7 +39,7 @@
 #include "options.h"
 // #include "helpers/monitor.h"
 
-extern Settings; // options_t Settings;
+options_t Settings; // options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                run_ipv4tcp_client(&Settings, Settings.remote_addr, Settings.port); // bandwidth
+                run_ipv4tcp_client(Settings.remote_addr, Settings.port); // bandwidth
             };
             return EXIT_SUCCESS;
         }
