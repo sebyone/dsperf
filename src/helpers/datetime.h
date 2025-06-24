@@ -14,11 +14,21 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <pthread_time.h>
+#include <pthread.h>
+#include <pthread_time.h>
 
 typedef long timedata_t;
 
 static struct timeval __tv;
 static struct timespec __ts;
+
+// -------------------------------------------------------------------------------------------------------- !
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 
 // -------------------------------------------------------------------------------------------------------- !
 
@@ -40,6 +50,7 @@ double get_time_microseconds()
     return __ts.tv_sec * 1e6 + __ts.tv_nsec / 1000;
 }
 
+/*
 /*
 double now_sec()
 {
