@@ -69,10 +69,9 @@ typedef enum
 #endif
 
 #include <ctype.h>
-//#include <cstdlib>
 #include <stdlib.h>
-//#include <cstring>
 #include <string.h>
-//#include <cstdio>
 #include <stdio.h>
+
+
 #endif // DSPERF_LOCALS_H

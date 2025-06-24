@@ -51,11 +51,6 @@
 #define TEST_MODEL_INFO "Throughput/Bandwidth v.01a"
 #define TEST_MODEL_LINK "developers@sebyone.it"
 
-#include "../utils.h"
-#include "../locals.h"
-#include "../options.h"
-#include "../hardware.h"
-
 // ipv4_tcp
 #define PACKET_BUFFER_MAX_SIZE 2048
 //
@@ -66,30 +61,43 @@
 #define MAX_LINKS 5
 #define MAX_REMOTE_LINKS 64
 #define LINK_MAX_VAL 6
+typedef enum
+{
+    _OUTS_CSV_HEADER = 1, // header
+    _OUTS_CSV_ROW,        // simple line
+    _OUTS_SUMMARY,
+    _OUTS_SUMMARY_ROW
+} frm_stuffs_e;
+
+#define VARS_COUNTER 13
 
 enum ipv4tcp_vars // Test Model Indicators
 {
-    _tstcounter = 0,
-    _blocksize, // data to send
-    _protocol,
-    _pktpayload,
-    _pktheader,
-    _efficiency,
-    _pktstosend,
-    _pktssent,
-    _pktsloss,
-    _datasent,
-    _pktserror,
-    _ttime,
-    _throughput // Mbps
+    _tstcounter = 0, // test executions
+    _blocksize,      // "data to send" traffic block size [MB]
+    _protocol,       // TEST_MODEL_NAME - Setted
+    _pktpayload,     //  packet payload size header not included [bytes]
+    _pktheader,      // Header [bytes]   - 17 bytes IP header + sub-protocol options 0..34 bytes
+    _efficiency,     // Efficiency [%]   - ratio: [%] = payload / total_packet_size ( header+payload )
+    _pktstosend,     // Pkts to send
+    _pktssent,       // Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
+    _pktsloss,       // Pkt loss       - ???????????????????????
+    _datasent,       // Data Sent [MB] -
+    _pktserror,      // Pkt Err.[%]
+    _ttime,          // Transfer Time [ms]
+    _throughput      // Throughput [MBps]  [Mbps] [pps]
 };
+
+#include "../helpers/utils.h"
+#include "../options.h"
+#include "../hardware.h"
 
 ret_t get_env_ipv4tcp(netif_t &_nif); // returns interface information
 
 ret_t set_env_ipv4tcp(netif_t &nif_); // uodates interface parameters
 
-ret_t run_server_ipv4tcp(int nif, int port); // start loopback server
+ret_t run_server_ipv4tcp(int nif_, int port_); // start loopback server
 
-ret_t run_client_ipv4tcp(char *server_ip, int server_port); // performs test
+ret_t run_client_ipv4tcp(char *server_ip_, int port_); // performs test
 
 #endif // MODEL_IPV4TCP_H

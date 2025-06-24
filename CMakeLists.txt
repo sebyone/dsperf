@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
+project(dsperf LANGUAGES CXX)
 
-project(dsperf)
 
-# Directories
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Version Header
 configure_file(
@@ -12,17 +10,31 @@ configure_file(
     @ONLY
 )
 
-# Uses libdaas
+# Options
 option(WITH_DAAS "Enable support for libdaas" OFF)
 message(STATUS "WITH_DAAS = ${WITH_DAAS}")
 
+# Directories & Sources files
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+#set( TARGET ${PROJECT_NAME} )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin )
+
+#set( SOURCE_PATH "${SRC_DIR}/src" )
+#set( INCLUDE_PATH "${PROJECT_SOURCE_DIR}/include" )
+
+#file( GLOB_RECURSE HPPS "${INCLUDE_PATH}/*.h" )
+file( GLOB_RECURSE HPPS "${SRC_DIR}/*.h" )
+file( GLOB_RECURSE CPPS "${SRC_DIR}/*.cpp" )
+
+add_executable(dsperf ${CPPS} ${HPPS} )
 
 # Standard C/C++
 set(CMAKE_CXX_FLAGS "-I c:/msys64/usr/include") 
+set(CMAKE_C_FLAGS "-I c:/msys64/usr/include") 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
@@ -38,15 +50,20 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
  
 #Define GNU standard installation directories
-include( GNUInstallDirs )
+#include( GNUInstallDirs )
 
-add_executable(dsperf src/main.cpp)
+#add_executable(dsperf src/main.cpp)
 
+#target_include_directories( ${TARGET} PUBLIC ${INCLUDE_PATH} )
+#target_compile_options( ${TARGET} PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wunused-parameter -Wno-long-long -pedantic )
+#target_compile_features( ${TARGET} PRIVATE cxx_std_14 )
+
+#install( TARGETS ${TARGET} RUNTIME DESTINATION )
 
 #Link from installed packages
 #target_link_libraries( phone software hardware )
 
-target_sources(dsperf PRIVATE "src/options.cpp")
+#target_sources(dsperf PRIVATE "src/options.cpp")
 
 # Main sources
 set(SRC_FILES
@@ -57,6 +74,7 @@ set(SRC_FILES
     ${SRC_DIR}/models/model_ipv4tcp.cpp
     ${SRC_DIR}/helpers/sysinfo.cpp
     ${SRC_DIR}/helpers/timer.c
+    ${SRC_DIR}/helpers/monitor.cpp
 )   
 
 ## Headers
@@ -69,10 +87,11 @@ set(HDR_FILES
     ${SRC_DIR}/models/model_ipv4tcp.h
     ${SRC_DIR}/helpers/sysinfo.h
     ${SRC_DIR}/helpers/timer.h
+    ${SRC_DIR}/helpers/monitor.h
 )
 
-target_sources(dsperf PRIVATE ${SRC_FILES})
-target_precompile_headers(dsperf PRIVATE ${HDR_FILES})
+#target_sources(dsperf PRIVATE ${SRC_FILES})
+#target_precompile_headers(dsperf PRIVATE ${HDR_FILES})
 
 #add_subdirectory(src) require CmakeList.txt
 
@@ -101,7 +120,7 @@ endif()
 
 #target_link_libraries(
    # dsperf
-   # PRIVATE pthread
+   #PRIVATE pthread
    # PRIVATE bluetooth
 #)
 

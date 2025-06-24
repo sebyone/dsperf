@@ -40,6 +40,8 @@
 #pragma once
 
 #include "locals.h"
+
+#include <stdlib.h>
 #include <vector>
 
 // Data Structures for local hardware resources

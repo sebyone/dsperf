@@ -1,7 +1,7 @@
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
- * File: loopback.c
+ * File: timers.h
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -13,19 +13,19 @@
  *
  */
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef TIMERS_H
+#define TIMERS_H
 
-#include <stdbool.h>
 #include <stdlib.h>
-#include <time.h>
+#include <stdbool.h>
+// #include <time.h>
 
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
     // Timer struct
     typedef struct
     {
@@ -36,6 +36,8 @@ extern "C"
         bool running;
         bool tick;
     } dsperf_timer_t;
+
+    double get_time_microseconds();
 
     // Create a timer that "wakes up" in an defined interval
     dsperf_timer_t *dsperf_timer_create(unsigned int interval_us);
@@ -57,4 +59,4 @@ extern "C"
 }
 #endif
 
-#endif
+#endif // TIMERS_H

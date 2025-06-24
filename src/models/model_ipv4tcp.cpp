@@ -22,46 +22,11 @@
 #include <math.h>
 
 #include "../options.h"
-#include "../helpers/timer.h"
+#include "../helpers/timers.h"
 #include "../helpers/datetime.h"
 
 extern options_t Settings; // options_t Settings;
-double vars[13];           // computed values for enum ipv4tcp_vars
-
-
-typedef enum
-{
-    _OUTS_CSV_HEADER = 1, // header
-    _OUTS_CSV_ROW,        // simple line
-    _OUTS_SUMMARY,
-    _OUTS_SUMMARY_ROW
-
-} frm_stuffs_e;
-
-/*
-struct // model_ipv4_tcp report
-{
-    // char *test_model = TEST_MODEL_NAME; // Setted
-    hwif_t interface;    // test
-    int repetitions;     // test executions
-    long int block_size; // "data to send" traffic block size [MB]
-
-    // char *model_info = TEST_MODEL_NAME; // Setted
-    int pkt_Length; //  packet size header included [bytes]
-    int pkt_header; // Header [bytes]   - 17 bytes IP header + sub-protocol options 0..34 bytes
-    // Efficiency [%]   - ratio: [%] = payload / total_packet_size ( header+payload )
-
-    int pkts_to_send; // Pkts to send   - trunc(blocksize / packet_payload) + (blocksize % packet_payload)
-    int pkts_sent;    // Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
-    int pkts_loss;    // Pkt loss       - ???????????????????????
-    int data_sent;    // Data Sent [MB] -
-
-    long int test_time;       // Transfer Time [ms]
-    long int test_throughput; // Throughput [MBps]  [Mbps] [pps]
-    double err_pkts_p;        //   // Pkt Err.[%]
-
-} model_data;
-*/
+double vars[VARS_COUNTER];           // computed values for enum ipv4tcp_vars
 
 
 
@@ -169,7 +134,97 @@ ret_t set_env_ipv4tcp()
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_client_ipv4tcp(char *_server_ip, int _server_port)
+// LOOPBACK SERVER
+// -------------------------------------------------------------------------------------------------------- !
+ret_t run_server_ipv4tcp(int nif_, int port_)
+{
+    char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
+
+    int server_sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (server_sock < 0)
+    {
+        return rtErr;
+    }
+
+    int opt = 1;
+    setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port_);
+    addr.sin_addr.s_addr = INADDR_ANY; // Set interface addr
+
+    if (bind(server_sock, (const sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        perror("bind");
+        close(server_sock);
+        return rtErr;
+    }
+
+    if (listen(server_sock, 1) < 0)
+    {
+        pverbose("Error IP Socket listen");
+        close(server_sock);
+        return rtOk;
+    }
+
+    pverbose("[TCP/IP] Listen on port [%d]...\n", port_);
+
+    sockaddr peer_addr;
+    socklen_t peer_addr_len = sizeof(peer_addr);
+    int peer_sock;
+
+    while (1)
+    {
+        peer_sock = accept(server_sock, &peer_addr, &peer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
+        if (peer_sock < 0)
+        {
+            pverbose("[TCP/IP] Error Accepting...\n");
+            perror("accept");
+            continue;
+        }
+
+        pverbose("[TCP/IP] Accepted remote [%s]\n", peer_addr.sa_data);
+
+        int curr_mss = 0;
+        socklen_t curr_mss_len = sizeof(curr_mss);
+        if (getsockopt(peer_sock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) != 0)
+        {
+            pverbose("[TCP/IP] Error can't negotiate mss \n");
+            return rtErr;
+        }
+        pverbose("[TCP/IP] Negotiated mss [%d] bytes \n", curr_mss);
+
+        int total_received = 0;
+        double start = get_time_microseconds();
+
+        while (1) // Receiving time-out or connection closed !!!!!!!!!!!!!
+        {
+            ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
+            if (recvd <= 0)
+                break;
+            total_received += recvd;
+        }
+
+        double seconds = (get_time_microseconds() - start) / 1e6;
+        double throughput = (seconds > 0) ? (total_received / (1024.0 * 1024.0) / seconds) : 0;
+
+        // pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n", , seconds, total_received, throughput);
+        free(buffer);
+        shutdown(peer_sock, 2); //  2 - Stop both reception and transmission.
+        // close(peer_sock);  //  If data waiting to be transmitted, close tries to complete this transmission (SO_LINGER).
+    }
+    shutdown(server_sock, 2); //  2 - Stop both reception and transmission.
+                              // close(server_sock);
+    return rtOk;
+}
+
+// -------------------------------------------------------------------------------------------------------- !
+// CLIENT
+// -------------------------------------------------------------------------------------------------------- !
+ret_t run_client_ipv4tcp(char *server_ip_, int port_)
 {
     // size_t block_size = _test->block_size;
     // size_t mtu = _test->pkt_payload;
@@ -218,9 +273,9 @@ ret_t run_client_ipv4tcp(char *_server_ip, int _server_port)
 
     struct sockaddr_in serv_addr = {
         .sin_family = AF_INET,
-        .sin_port = htons(_server_port),
+        .sin_port = htons(port_),
     };
-    inet_pton(AF_INET, _server_ip, &serv_addr.sin_addr);
+    inet_pton(AF_INET, server_ip_, &serv_addr.sin_addr);
 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
@@ -304,94 +359,6 @@ ret_t run_client_ipv4tcp(char *_server_ip, int _server_port)
 
     free(packet);
     close(sock);
-    return rtOk;
-}
-
-// -------------------------------------------------------------------------------------------------------- !
-// dual mode: drop packets / send back packets !!!!!!!!!!
-//
-ret_t run_server_ipv4tcp(int port)
-{
-    char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
-
-    int server_sock = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (server_sock < 0)
-    {
-        return rtErr;
-    }
-
-    int opt = 1;
-    setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY; // Set interface addr
-
-    if (bind(server_sock, (const sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        perror("bind");
-        close(server_sock);
-        return rtErr;
-    }
-
-    if (listen(server_sock, 1) < 0)
-    {
-        pverbose("Error IP Socket listen");
-        close(server_sock);
-        return rtOk;
-    }
-
-    pverbose("[TCP/IP] Listen on port [%d]...\n", port);
-
-    sockaddr peer_addr;
-    socklen_t peer_addr_len = sizeof(peer_addr);
-    int peer_sock;
-
-    while (1)
-    {
-        peer_sock = accept(server_sock, &peer_addr, &peer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
-        if (peer_sock < 0)
-        {
-            pverbose("[TCP/IP] Error Accepting...\n");
-            perror("accept");
-            continue;
-        }
-
-        pverbose("[TCP/IP] Accepted remote [%s]\n", peer_addr.sa_data);
-
-        int curr_mss = 0;
-        socklen_t curr_mss_len = sizeof(curr_mss);
-        if (getsockopt(peer_sock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) != 0)
-        {
-            pverbose("[TCP/IP] Error can't negotiate mss \n");
-            return rtErr;
-        }
-        pverbose("[TCP/IP] Negotiated mss [%d] bytes \n", curr_mss);
-
-        int total_received = 0;
-        double start = get_time_microseconds();
-
-        while (1) // Data receiving time-out or remote closes connection !!!!!!!!!!!!!
-        {
-            ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
-            if (recvd <= 0)
-                break;
-            total_received += recvd;
-        }
-
-        double seconds = (get_time_microseconds() - start) / 1e6;
-        double throughput = (seconds > 0) ? (total_received / (1024.0 * 1024.0) / seconds) : 0;
-
-        // pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n", , seconds, total_received, throughput);
-        free(buffer);
-        shutdown(peer_sock, 2); //  2 - Stop both reception and transmission.
-        // close(peer_sock);  //  If data waiting to be transmitted, close tries to complete this transmission (SO_LINGER).
-    }
-    shutdown(server_sock, 2); //  2 - Stop both reception and transmission.
-                              // close(server_sock);
     return rtOk;
 }
 
