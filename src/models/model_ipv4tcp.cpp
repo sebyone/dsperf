@@ -1,19 +1,42 @@
 
 #include "model_ipv4tcp.h"
 
-#if defined(__linux__) || defined(__RASP__)
-#include <unistd.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
+#if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
+
+#include <unistd.h>      // Posix API ( fopen, close etc.etc. )
+#include <sys/ioctl.h>   // does not declare the ioctl function on some platforms: AIX 5.1, Solaris 11.4, Haiku 2017
+#include <sys/types.h>   // defines a collection of typedef symbols and structures
+#include <sys/socket.h>  // Macros and structures to use sockets
+#include <netinet/in.h>  // Definitions for the internet protocol family
+#include <netinet/tcp.h> // defines macros for use as a socket option
+// #include <arpa/inet.h>
+
+#elif defined(__windows__)
+
+#include <winsock.h>
+#include <winsock2.h>
+#include <sys/types.h>
+
 #endif
+
 #include <math.h>
+
 #include "../options.h"
 #include "../helpers/timer.h"
 #include "../helpers/datetime.h"
-//extern Settings; // options_t Settings;
-double vars[13]; // computed values for enum ipv4tcp_vars
+
+extern options_t Settings; // options_t Settings;
+double vars[13];           // computed values for enum ipv4tcp_vars
+
+
+typedef enum
+{
+    _OUTS_CSV_HEADER = 1, // header
+    _OUTS_CSV_ROW,        // simple line
+    _OUTS_SUMMARY,
+    _OUTS_SUMMARY_ROW
+
+} frm_stuffs_e;
 
 /*
 struct // model_ipv4_tcp report
@@ -40,18 +63,13 @@ struct // model_ipv4_tcp report
 } model_data;
 */
 
-typedef enum
-{
-    _OUTS_CSV_HEADER = 1, // header
-    _OUTS_CSV_ROW,        // simple line
-    _OUTS_SUMMARY,
-    _OUTS_SUMMARY_ROW
 
-} frm_stuffs_e;
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t ipv4tcp_bandwidth(int ifn); // computes bandwidth for local interface
-
+ret_t ipv4tcp_bandwidth(int ifn, long &_dband) // computes bandwidth for local interface
+{
+    return rtOk;
+}
 
 // -------------------------------------------------------------------------------------------------------- !
 void print_outs(frm_stuffs_e _switch)
@@ -96,7 +114,7 @@ void print_outs(frm_stuffs_e _switch)
 
         printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(vars[_blocksize]));
         printf("  Protocol:           %s\n", TEST_MODEL_NAME);
-        //printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
+        // printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
         printf("  Header:             %d bytes\n", vars[_pktheader]);
         printf("  Efficiency:         %.3f %%\n", vars[_efficiency]);
         printf("  Pkts to send:     %.3f\n", vars[_pktstosend]); // numero pacchetti da inviare
@@ -120,7 +138,7 @@ void print_outs(frm_stuffs_e _switch)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t check_ipv4tcp()
+ret_t set_env_ipv4tcp()
 {
     char ip[64];
     int port;
@@ -147,11 +165,11 @@ ret_t check_ipv4tcp()
     {
         pverbose("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
     }
-   return rtOk; 
+    return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
+ret_t run_client_ipv4tcp(char *_server_ip, int _server_port)
 {
     // size_t block_size = _test->block_size;
     // size_t mtu = _test->pkt_payload;
@@ -171,12 +189,32 @@ ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
     int mss = 0; // packet's payload size
     char *pkt_payload;
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    int sock = socket(AF_INET, SOCK_STREAM, 0); // Open socket
     if (sock < 0)
     {
         pverbose("Can't OPEN socket error!");
         return (rtErr);
     }
+
+#if (0) // --- Set mss
+    mss = 576;
+    if (setsockopt(sock, IPPROTO_TCP, TCP_MAXSEG, &mss, sizeof(mss)) != 0)
+    {
+        pverbose("Can't get MSS!");
+        return (rtErr);
+    }
+
+    // Read back the MSS value.
+    int curr_mss;
+    socklen_t curr_mss_len = sizeof(curr_mss);
+    if (getsockopt(lsock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) < 0)
+    {
+        perror(0);
+        return 1;
+    }
+
+    printf("mss: %d\n", curr_mss);
+#endif // ---
 
     struct sockaddr_in serv_addr = {
         .sin_family = AF_INET,
@@ -229,6 +267,7 @@ ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
     }
 
     vars[_tstcounter] = 0;
+
     while (vars[_tstcounter]++ < Settings.repetitions)
     {
         vars[_pktssent] = 0;
@@ -238,7 +277,7 @@ ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
         {
             if (bytes2send >= vars[_pktpayload])
             {
-                bytes2send -= send(sock, packet, (int)vars[_pktpayload], 0);
+                bytes2send -= send(sock, packet, (size_t)vars[_pktpayload], (int)0); // (https://man7.org/linux/man-pages/man2/send.2.html)
             }
             else
             {
@@ -271,9 +310,12 @@ ret_t run_ipv4tcp_client(const char *_server_ip, int _server_port)
 // -------------------------------------------------------------------------------------------------------- !
 // dual mode: drop packets / send back packets !!!!!!!!!!
 //
-ret_t run_ipv4tcp_server(int port)
+ret_t run_server_ipv4tcp(int port)
 {
+    char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
+
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
+
     if (server_sock < 0)
     {
         return rtErr;
@@ -282,13 +324,13 @@ ret_t run_ipv4tcp_server(int port)
     int opt = 1;
     setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    struct sockaddr_in addr;
-    memset(&addr,0,sizeof(addr));
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = INADDR_ANY; // Set interface addr
 
-    if (bind(server_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    if (bind(server_sock, (const sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("bind");
         close(server_sock);
@@ -297,87 +339,84 @@ ret_t run_ipv4tcp_server(int port)
 
     if (listen(server_sock, 1) < 0)
     {
-        pverbose("Socket listen");
+        pverbose("Error IP Socket listen");
         close(server_sock);
         return rtOk;
     }
 
-    pverbose("[SERVER] In ascolto sulla porta %d...\n", port);
+    pverbose("[TCP/IP] Listen on port [%d]...\n", port);
 
-    int run_count = 0;
+    sockaddr peer_addr;
+    socklen_t peer_addr_len = sizeof(peer_addr);
+    int peer_sock;
+
     while (1)
     {
-        run_count++;
-        pverbose("\n========== Waiting for connection %d (port %d) ==========\n", run_count, port);
-
-        int client_sock = accept(server_sock, NULL, NULL);
-        if (client_sock < 0)
+        peer_sock = accept(server_sock, &peer_addr, &peer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
+        if (peer_sock < 0)
         {
+            pverbose("[TCP/IP] Error Accepting...\n");
             perror("accept");
             continue;
         }
 
-        int mss = 0;
-        socklen_t optlen = sizeof(mss);
-        if (getsockopt(client_sock, IPPROTO_TCP, TCP_MAXSEG, &mss, &optlen) != 0)
-        {
-            // printf("[SERVER] MSS negotiated: %d bytes\n", mss);
-            perror("not load mss");
-        }
+        pverbose("[TCP/IP] Accepted remote [%s]\n", peer_addr.sa_data);
 
-        char *buffer = (char *)malloc(mss > 0 ? mss : 2048);
-        if (!buffer)
+        int curr_mss = 0;
+        socklen_t curr_mss_len = sizeof(curr_mss);
+        if (getsockopt(peer_sock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) != 0)
         {
-            perror("[SERVER] malloc failed");
-            close(client_sock);
-            continue;
+            pverbose("[TCP/IP] Error can't negotiate mss \n");
+            return rtErr;
         }
+        pverbose("[TCP/IP] Negotiated mss [%d] bytes \n", curr_mss);
 
         int total_received = 0;
         double start = get_time_microseconds();
 
-        /*
-        // Scambio RTT
-        char ping_buf[5] = {0};
-        ssize_t ping_len = recv(client_sock, ping_buf, sizeof(ping_buf), 0);
-        if (ping_len == sizeof(ping_buf) && strcmp(ping_buf, "PING") == 0)
+        while (1) // Data receiving time-out or remote closes connection !!!!!!!!!!!!!
         {
-            if (send(client_sock, "PONG", 5, 0) != 5)
-            {
-                perror("[SERVER] Errore invio PONG");
-                free(buffer);
-                close(client_sock);
-                continue;
-            }
-        }
-        else
-        {
-            fprintf(stderr, "[SERVER] Ping non ricevuto correttamente\n");
-            free(buffer);
-            close(client_sock);
-            continue;
-        }
-        */
-
-        while (1)
-        {
-            ssize_t recvd = recv(client_sock, buffer, mss > 0 ? mss : 2048, 0); // Negozia 2048 ?
+            ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
             if (recvd <= 0)
                 break;
             total_received += recvd;
         }
 
-        double end = get_time_microseconds();
-        double seconds = (end - start) / 1e6;
+        double seconds = (get_time_microseconds() - start) / 1e6;
         double throughput = (seconds > 0) ? (total_received / (1024.0 * 1024.0) / seconds) : 0;
 
-        pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n",
-                 run_count, seconds, total_received, throughput);
+        // pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n", , seconds, total_received, throughput);
+        free(buffer);
+        shutdown(peer_sock, 2); //  2 - Stop both reception and transmission.
+        // close(peer_sock);  //  If data waiting to be transmitted, close tries to complete this transmission (SO_LINGER).
+    }
+    shutdown(server_sock, 2); //  2 - Stop both reception and transmission.
+                              // close(server_sock);
+    return rtOk;
+}
+
+/*
+// Scambio RTT
+char ping_buf[5] = {0};
+ssize_t ping_len = recv(client_sock, ping_buf, sizeof(ping_buf), 0);
+if (ping_len == sizeof(ping_buf) && strcmp(ping_buf, "PING") == 0)
+{
+    if (send(client_sock, "PONG", 5, 0) != 5)
+    {
+        perror("[SERVER] Errore invio PONG");
         free(buffer);
         close(client_sock);
+        continue;
     }
-    close(server_sock);
 }
+else
+{
+    fprintf(stderr, "[SERVER] Ping non ricevuto correttamente\n");
+    free(buffer);
+    close(client_sock);
+    continue;
+}
+*/
 
 /*
 
@@ -442,41 +481,39 @@ ret_t run_ipv4tcp_server(int port)
     */
 // usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
 
+/* Solo se flag selezionato !!!!!!!
+FILE *csv = fopen(csv_path, i == 0 ? "w" : "a");
+int csv_enabled = 1;
+if (!csv)
+{
+    csv_enabled = 0;
+}
 
+if (i == 0 && csv_enabled == 1)
+    fprintf(csv, "Timestamp_ms,Num Pkt,Dimensione Pkt,Throughput_MBps,RTT_ms\n");
 
-    /* Solo se flag selezionato !!!!!!!
-    FILE *csv = fopen(csv_path, i == 0 ? "w" : "a");
-    int csv_enabled = 1;
-    if (!csv)
+char ping_msg[] = "PING";
+char pong_msg[5] = {0};
+
+double rtt_ms = 0;
+double ping_start = get_time_microseconds();
+if (send(sock, ping_msg, sizeof(ping_msg), 0) != sizeof(ping_msg))
+{
+    perror("[CLIENT] Error sending PING");
+}
+else
+{
+    ssize_t r = recv(sock, pong_msg, sizeof(pong_msg), 0);  // Bloccante !!!!!!!!!!
+
+    if (r != sizeof(pong_msg) || strcmp(pong_msg, "PONG") != 0)
     {
-        csv_enabled = 0;
-    }
-
-    if (i == 0 && csv_enabled == 1)
-        fprintf(csv, "Timestamp_ms,Num Pkt,Dimensione Pkt,Throughput_MBps,RTT_ms\n");
-
-    char ping_msg[] = "PING";
-    char pong_msg[5] = {0};
-
-    double rtt_ms = 0;
-    double ping_start = get_time_microseconds();
-    if (send(sock, ping_msg, sizeof(ping_msg), 0) != sizeof(ping_msg))
-    {
-        perror("[CLIENT] Error sending PING");
+        fprintf(stderr, "[CLIENT] Invalid PONG response\n");
     }
     else
     {
-        ssize_t r = recv(sock, pong_msg, sizeof(pong_msg), 0);  // Bloccante !!!!!!!!!!
-
-        if (r != sizeof(pong_msg) || strcmp(pong_msg, "PONG") != 0)
-        {
-            fprintf(stderr, "[CLIENT] Invalid PONG response\n");
-        }
-        else
-        {
-            double ping_end = get_time_microseconds();
-            rtt_ms = (ping_end - ping_start) / 1000.0;
-            // printf("[CLIENT] RTT misurato: %.3f ms\n", rtt_ms);
-        }
+        double ping_end = get_time_microseconds();
+        rtt_ms = (ping_end - ping_start) / 1000.0;
+        // printf("[CLIENT] RTT misurato: %.3f ms\n", rtt_ms);
     }
-    */
+}
+*/

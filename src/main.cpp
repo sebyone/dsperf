@@ -36,7 +36,7 @@
 #include "version.h"
 #include "options.h"
 
-options_t Settings; // options_t Settings;
+extern options_t Settings; // options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
@@ -53,15 +53,17 @@ int main(int argc, char *argv[])
 
 #ifdef TEST_IPV4TCP
     case TEST_IPV4TCP: // TEST_CLASS_CAPACITY, MODEL: ipv4/tcp
-        if (check_ipv4tcp())
+        netif_t myif;
+        if (get_env_ipv4tcp(myif))
         {
+            set_env_ipv4tcp(myif);
             if (Settings.host_role == 0) // 0 = server, 1 = client
             {
-                run_ipv4tcp_server(Settings.port);
+                run_server_ipv4tcp(0,Settings.port);
             }
             else
             {
-                run_ipv4tcp_client(Settings.remote_addr, Settings.port); // bandwidth
+                run_client_ipv4tcp(Settings.remote_addr, Settings.port); // bandwidth
             };
             return EXIT_SUCCESS;
         }
@@ -86,11 +88,11 @@ int main(int argc, char *argv[])
     case 7:                          // daas fresbee
         if (Settings.host_role == 0) // 0 = server, 1 = client
         {
-            run_ipv4tcp_server(Settings.port);
+            run_server_ipv4tcp(Settings.port);
         }
         else
         {
-            run_ipv4tcp_client(&Settings, const char *server_ip, int server_port); // bandwidth
+            run_client_ipv4tcp(&Settings, const char *server_ip, int server_port); // bandwidth
         };
         return EXIT_SUCCESS;
         break;

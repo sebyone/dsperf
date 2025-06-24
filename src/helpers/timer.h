@@ -10,22 +10,22 @@
  * plogiacco@smartlab.it - initial design, implementation and documentation
  * sebastiano.meduri@gmail.com  - initial design, implementation and documentation
  * m.pagano@sebyone.it
- * 
+ *
  */
 
 #ifndef TIMER_H
 #define TIMER_H
 
 #include <stdbool.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <time.h>
+
+#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
     // Timer struct
     typedef struct
     {

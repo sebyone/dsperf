@@ -81,7 +81,7 @@ typedef struct
     bool version;
 } options_t;
 
-extern options_t Settings;
+options_t Settings;
 
 void print_usage(const char *prog_name);
 

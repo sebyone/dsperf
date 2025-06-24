@@ -8,27 +8,53 @@
  */
 
 #ifndef SYSTIME_H
-
 #define SYSTIME_H
 
-typedef long timedata_t;
-
-// -------------------------------------------------------------------------------------------------------- !
-
 #include <time.h>
-#include "timer.h"
 #include <sys/time.h>
+#include <pthread.h>
+#include <pthread_time.h>
 
 typedef long timedata_t;
 
 static struct timeval __tv;
 static struct timespec __ts;
 
+<<<<<<< Updated upstream
 double now_in_seconds();
 double get_time_microseconds();
 double now_sec();
+=======
+// -------------------------------------------------------------------------------------------------------- !
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+
+double now_in_seconds()
+{
+    gettimeofday(&__tv, NULL);
+    return __tv.tv_sec + (__tv.tv_usec / 1000000.0);
+}
+
+double get_time_microseconds()
+{
+    clock_gettime(CLOCK_MONOTONIC, &__ts);
+    return __ts.tv_sec * 1e6 + __ts.tv_nsec / 1000;
+}
 
 /*
+double now_sec()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + tv.tv_usec / 1e6;
+}
+>>>>>>> Stashed changes
+
+
 double now_in_seconds()
 {
     struct timeval tv;
@@ -43,5 +69,10 @@ static double get_time_microseconds()
     return ts.tv_sec * 1e6 + ts.tv_nsec / 1000;
 }
 */
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif  // SYSTIME_H

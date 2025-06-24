@@ -26,7 +26,6 @@
  * 
  */
 
-
 // Sends a block of data to remote server and print out all test results (test_outs)
 //
 // Sub Protocol as defined in RFCs 790-791
@@ -42,7 +41,6 @@
 // 89	Open Shortest Path First	            OSPF
 // 132	Stream Control Transmission Protocol	SCTP
 
-
 #ifndef MODEL_IPV4TCP_H
 #define MODEL_IPV4TCP_H
 
@@ -53,15 +51,27 @@
 #define TEST_MODEL_INFO "Throughput/Bandwidth v.01a"
 #define TEST_MODEL_LINK "developers@sebyone.it"
 
+#include "../utils.h"
 #include "../locals.h"
 #include "../options.h"
 #include "../hardware.h"
+<<<<<<< Updated upstream
 #include "../utils.h"
 #include "../helpers/datetime.h"
+=======
+>>>>>>> Stashed changes
 
+// ipv4_tcp
+#define PACKET_BUFFER_MAX_SIZE 2048
+//
+#define MIN_PORT 1
+#define MAX_PORT 65535
+//
+#define MAX_LINE_LEN 256
+#define MAX_LINKS 5
+#define MAX_REMOTE_LINKS 64
+#define LINK_MAX_VAL 6
 
-// Model Indicators 
-enum ipv4tcp_vars
 {
     _tstcounter = 0,
     _blocksize, // data to send
@@ -78,25 +88,14 @@ enum ipv4tcp_vars
     _throughput // Mbps
 };
 
-// ipv4_tcp
-#define MIN_PORT 1
-#define MAX_PORT 65535
-//
-#define MAX_LINE_LEN 256
-#define MAX_LINKS 5
-#define MAX_REMOTE_LINKS 64
-#define LINK_MAX_VAL 6
-
-// ipv4_tcp
-#define MIN_PORT 1
-#define MAX_PORT 65535
-
-ret_t get_ipv4tcp_info(); // return test model information (string)
 
 ret_t check_ipv4tcp();
+ret_t set_env_ipv4tcp(netif_t &nif_); // uodates interface parameters
 
 ret_t run_ipv4tcp_server(int port); // start loopback server
+ret_t run_server_ipv4tcp(int nif, int port); // start loopback server
 
 ret_t run_ipv4tcp_client(const char *server_ip, int server_port); // performs test
+ret_t run_client_ipv4tcp(char *server_ip, int server_port); // performs test
 
 #endif // MODEL_IPV4TCP_H

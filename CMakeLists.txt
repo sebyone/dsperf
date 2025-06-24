@@ -1,81 +1,89 @@
 cmake_minimum_required(VERSION 3.10)
-#project(dsperf VERSION 0.0.35 LANGUAGES C CXX)
 
-project(dsperf CXX)
+project(dsperf)
+
+# Directories
+set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Version Header
+configure_file(
+    src/version.h.in
+    src/version.h
+    @ONLY
+)
 
 # Uses libdaas
 option(WITH_DAAS "Enable support for libdaas" OFF)
 message(STATUS "WITH_DAAS = ${WITH_DAAS}")
 
+
 # Standard C/C++
+set(CMAKE_CXX_FLAGS "-I c:/msys64/usr/include") 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
+
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-#set(CMAKE_CXX_)
+# Add the given directories to those the compiler uses to search for include files.
+#target_include_directories(<target> [SYSTEM] [AFTER|BEFORE]
+#  <INTERFACE|PUBLIC|PRIVATE> [items1...]
+#  [<INTERFACE|PUBLIC|PRIVATE> [items2...] ...])
+#set(ENV export IMPORTED_CXX_MODULES_INCLUDE_DIRECTORIES=/ucrt64/include)
+#In case load library from system. For the static library and shared library: 
+#set ( PROJECT_LINK_LIBS libsoftware.a libhardware.dylib)
+# link library from installed directory
+#link_directories( ${CMAKE_INSTALL_FULL_LIBDIR} )
 
-include_directories(C:/msys64/usr/include/sys)
+ 
+#Define GNU standard installation directories
+include( GNUInstallDirs )
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
-# Directories
-set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-set(INC_DIR ${LIB_DIR}/include)
-
-#set(SYSTEM_INFO_DIR ${SRC_DIR}/system_info_wrapper)
-#set(LOOPBACK_DIR ${SRC_DIR})
-
-# Version header
-configure_file(
-    ${SRC_DIR}/version.h.in
-    ${SRC_DIR}/version.h
-    @ONLY
-)
-
-file(GLOB_RECURSE SRC_FILES "${SRC_DIR}/*.cpp" "${SRC_DIR}/.h" )
-
-#target_sources(some_target PRIVATE more_cool_stuff.cpp)
-
-# add_library(dsperf )
 add_executable(dsperf src/main.cpp)
 
 
-target_sources(dsperf PRIVATE ${SRC_FILES})
-#add_subdirectory(src) require CmakeList.txt
+#Link from installed packages
+#target_link_libraries( phone software hardware )
 
-
+target_sources(dsperf PRIVATE "src/options.cpp")
 
 # Main sources
-#set(SRC_FILES
-#    ${SRC_DIR}/main.cpp
-#    ${SRC_DIR}/options.cpp
-#    ${SRC_DIR}/hardware.cpp
-#    ${SRC_DIR}/models/model_daasfrs.cpp
-#    ${SRC_DIR}/models/model_ipv4tcp.cpp
-#    ${SRC_DIR}/helpers/sysinfo.cpp
-#    ${SRC_DIR}/helpers/timer.cpp
-#)   
-
-
-
-
+set(SRC_FILES
+    ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/options.cpp
+    ${SRC_DIR}/hardware.cpp
+    ${SRC_DIR}/models/model_daasfrs.cpp
+    ${SRC_DIR}/models/model_ipv4tcp.cpp
+    ${SRC_DIR}/helpers/sysinfo.cpp
+    ${SRC_DIR}/helpers/timer.c
+)   
 
 ## Headers
-#set(HDR_FILES
-#    ${SRC_DIR}/local.h
-#    ${SRC_DIR}/options.h
-#    ${SRC_DIR}/hardware.h
-#    ${SRC_DIR}/version.h
-#    ${SRC_DIR}/models/model_daasfrs.h
-#    ${SRC_DIR}/models/model_ipv4tcp.h
-#    ${SRC_DIR}/helpers/sysinfo.h
-#    ${SRC_DIR}/helpers/timer.h
+set(HDR_FILES
+    ${SRC_DIR}/locals.h
+    ${SRC_DIR}/options.h
+    ${SRC_DIR}/hardware.h
+    ${SRC_DIR}/version.h
+    ${SRC_DIR}/models/model_daasfrs.h
+    ${SRC_DIR}/models/model_ipv4tcp.h
+    ${SRC_DIR}/helpers/sysinfo.h
+    ${SRC_DIR}/helpers/timer.h
+)
+
+target_sources(dsperf PRIVATE ${SRC_FILES})
+target_precompile_headers(dsperf PRIVATE ${HDR_FILES})
+
+#add_subdirectory(src) require CmakeList.txt
+
+# Include directory 
+#target_include_directories(dsperf PRIVATE
+#    ${INC_DIR}
 #)
 
+
 # Cerca tutti i .cpp e .h in src e sottocartelle
-#file(GLOB_RECURSE SOURCES "src/.cpp" "src/.h")
+
 
 # Aggiunge facoltativamente header daas **solo se esistono**
 if(WITH_DAAS)
@@ -107,10 +115,6 @@ else()
     message(STATUS "Compiling WITHOUT libdaas")
 endif()
 
-# Include directory 
-#target_include_directories(dsperf PRIVATE
-#    ${INC_DIR}
-#)
 
 
 
