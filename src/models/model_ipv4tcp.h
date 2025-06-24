@@ -55,14 +55,9 @@
 #include "../locals.h"
 #include "../options.h"
 #include "../hardware.h"
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 #include "../utils.h"
 #include "../helpers/datetime.h"
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
 
 // ipv4_tcp
 #define PACKET_BUFFER_MAX_SIZE 2048
