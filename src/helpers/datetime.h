@@ -20,10 +20,6 @@ typedef long timedata_t;
 static struct timeval __tv;
 static struct timespec __ts;
 
-double now_in_seconds();
-double get_time_microseconds();
-double now_sec();
-
 // -------------------------------------------------------------------------------------------------------- !
 
 #ifdef __cplusplus

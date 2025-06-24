@@ -55,9 +55,17 @@
 #include "../locals.h"
 #include "../options.h"
 #include "../hardware.h"
-#include "../utils.h"
-#include "../helpers/datetime.h"
 
+// ipv4_tcp
+#define PACKET_BUFFER_MAX_SIZE 2048
+//
+#define MIN_PORT 1
+#define MAX_PORT 65535
+//
+#define MAX_LINE_LEN 256
+#define MAX_LINKS 5
+#define MAX_REMOTE_LINKS 64
+#define LINK_MAX_VAL 6
 
 // ipv4_tcp
 #define PACKET_BUFFER_MAX_SIZE 2048
