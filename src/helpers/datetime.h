@@ -21,10 +21,13 @@ static struct timeval __tv;
 static struct timespec __ts;
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 double now_in_seconds();
 double get_time_microseconds();
 double now_sec();
 =======
+=======
+>>>>>>> Stashed changes
 // -------------------------------------------------------------------------------------------------------- !
 
 #ifdef __cplusplus
@@ -55,6 +58,10 @@ double now_sec()
 >>>>>>> Stashed changes
 
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 double now_in_seconds()
 {
     struct timeval tv;
