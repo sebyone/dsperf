@@ -16,20 +16,20 @@
  * plogiacco@smartlab.it - initial design, implementation and documentation
  * sebastiano.meduri@gmail.com  - initial design, implementation and documentation
  *
- * 
+ *
  * ToDo:
  * - windows porting
  * - check um and throughput calc
  * - compute bandwidth and throughput % as: throughput / bandwidth * 100
  * - model multi-threading ( socket shared )
  * - model time-windowed
- * 
+ *
  */
 
 // Sends a block of data to remote server and print out all test results (test_outs)
 //
 // Sub Protocol as defined in RFCs 790-791
-// 6-TCP	Transmission Control Protocol   
+// 6-TCP	Transmission Control Protocol
 
 // Numero di protocollo	Nome del protocollo	Abbreviazione
 // ----+---------------------------------------+----------
@@ -72,6 +72,7 @@
 #define MAX_REMOTE_LINKS 64
 #define LINK_MAX_VAL 6
 
+enum ipv4tcp_vars // Test Model Indicators
 {
     _tstcounter = 0,
     _blocksize, // data to send
@@ -88,14 +89,12 @@
     _throughput // Mbps
 };
 
+ret_t get_env_ipv4tcp(netif_t &_nif); // returns interface information
 
-ret_t check_ipv4tcp();
 ret_t set_env_ipv4tcp(netif_t &nif_); // uodates interface parameters
 
-ret_t run_ipv4tcp_server(int port); // start loopback server
 ret_t run_server_ipv4tcp(int nif, int port); // start loopback server
 
-ret_t run_ipv4tcp_client(const char *server_ip, int server_port); // performs test
 ret_t run_client_ipv4tcp(char *server_ip, int server_port); // performs test
 
 #endif // MODEL_IPV4TCP_H
