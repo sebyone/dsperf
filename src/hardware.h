@@ -78,10 +78,8 @@ typedef struct // local interfaces
                            drv tx_err hw
     Link detected: yes
     */
-} hwif_t;
 } netif_t;
 
-ret_t get_interfaces(hwif_t *ifs, int *_lsize); // Returns a list of availaible local interfaces ( )
 typedef std::vector<netif_t> lnetif_t;
 ret_t get_interfaces(lnetif_t *ifs); // Returns a list of availaible local interfaces ( )
 

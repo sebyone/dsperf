@@ -4,12 +4,9 @@
 
 #include <unistd.h> // Posix API
 #include <stdio.h>
-#include <stdlib.h>
 //#include <stdlib.h> // STanDard LIBrary C
 #include <stdlib.h> 
 #include <string.h>
-#include <unistd.h>
-#if defined(__linux__) || defined(__RASP__)
 
 
 #if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
