@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef DSPERF_LOCALS_H
-#define DSPERF_LOCALS_H
+#ifndef LOCALS_H
+#define LOCALS_H
 
 #pragma once
 
@@ -29,11 +29,10 @@
 #undef DEBUG
 #define VERBOSE
 
-//
 #define MIN_BLOCK_SIZE 1
-#define MAX_BLOCK_SIZE (1024 * 1024 * 1024) // 1GB
+#define MAX_BLOCK_SIZE _1GB // 1GB
 #define MIN_PACKET_SIZE 1
-#define MAX_PACKET_SIZE (10 * 1024 * 1024) // 10MB
+#define MAX_PACKET_SIZE 10 * _1MB // 10MB
 
 // ---------------------------------------------- END SETTINGS
 
@@ -58,6 +57,7 @@ typedef enum
     rtErr = 2   // Generic error
 } ret_t;
 
+/*
 #if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
 #include <unistd.h>
 #include <getopt.h>
@@ -68,10 +68,11 @@ typedef enum
 #include <time.h>
 #endif
 
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+*/
 
-
-#endif // DSPERF_LOCALS_H
+#endif // LOCALS_H

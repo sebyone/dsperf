@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(dsperf LANGUAGES CXX)
 
-
-
 # Version Header
 configure_file(
     src/version.h.in
@@ -64,31 +62,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #target_link_libraries( phone software hardware )
 
 #target_sources(dsperf PRIVATE "src/options.cpp")
-
-# Main sources
-set(SRC_FILES
-    ${SRC_DIR}/main.cpp
-    ${SRC_DIR}/options.cpp
-    ${SRC_DIR}/hardware.cpp
-    ${SRC_DIR}/models/model_daasfrs.cpp
-    ${SRC_DIR}/models/model_ipv4tcp.cpp
-    ${SRC_DIR}/helpers/sysinfo.cpp
-    ${SRC_DIR}/helpers/timer.c
-    ${SRC_DIR}/helpers/monitor.cpp
-)   
-
-## Headers
-set(HDR_FILES
-    ${SRC_DIR}/locals.h
-    ${SRC_DIR}/options.h
-    ${SRC_DIR}/hardware.h
-    ${SRC_DIR}/version.h
-    ${SRC_DIR}/models/model_daasfrs.h
-    ${SRC_DIR}/models/model_ipv4tcp.h
-    ${SRC_DIR}/helpers/sysinfo.h
-    ${SRC_DIR}/helpers/timer.h
-    ${SRC_DIR}/helpers/monitor.h
-)
 
 #target_sources(dsperf PRIVATE ${SRC_FILES})
 #target_precompile_headers(dsperf PRIVATE ${HDR_FILES})
