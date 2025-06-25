@@ -82,7 +82,7 @@ typedef struct
 
 } options_t;
 
-options_t Settings;
+extern options_t Settings;
 
 void print_usage(const char *prog_name);
 

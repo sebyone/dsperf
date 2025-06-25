@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <getopt.h>
 
 #include "version.h"
 
-extern options_t Settings;
+options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 void clearSettings()
