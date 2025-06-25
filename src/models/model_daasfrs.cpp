@@ -76,7 +76,7 @@ void run_daasfrs_client(daas_setup_t *daas_setup, options_t *test)
     int repetitions = test->repetitions;
     bool csv_format = test->csv_format;
     bool csv_no_header = test->csv_no_header;
-    int pack_num = test->pack_num;
+    int pkts_num = test->pkts_num;
 
     DaasAPI *node = setupNode(daas_setup, csv_format, csv_no_header);
     if (node == nullptr)
@@ -97,7 +97,7 @@ void run_daasfrs_client(daas_setup_t *daas_setup, options_t *test)
     for (int i = 0; i < repetitions; i++)
     {
         printf("Sending Test: %i\n", i + 1);
-        node->frisbee_dperf(remote_din, pack_num, block_size, 0);
+        node->frisbee_dperf(remote_din, pkts_num, block_size, 0);
         usleep(1000000);
     }
 

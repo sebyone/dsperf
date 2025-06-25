@@ -20,26 +20,21 @@
 
 #ifndef UTILS_H
 #define UTILS_H
-
-// Sizes
 //
-#define __TYPE64 long
-#define _1KB ((__TYPE64)1) << 10
-#define _1MB ((__TYPE64)1) << 20
-#define _1GB ((__TYPE64)1) << 30
+#define _1KB 1 << 10
+#define _1MB 1 << 20
+#define _1GB 1 << 30
 
-#define _Byte2Megabyte(b) ((__TYPE64)(b) / (1 << 20))
-#define _Byte2Megabits(b) ((__TYPE64)(b << 3) / (1 << 20))
-#define _MegaByte2Megabits(b) ((__TYPE64)(b << 3))
+#define _Byte2Megabyte(b) ((double)b / (1UL << 20))
+#define _Byte2Megabits(b) (((double)b * (2^3)) / (double)(2^20))
 
 // Bitwise
 //
-#define __TYPE8 uint8_t
-#define _BV(n)  (1 << (n))
-#define _LSB(w) ((__TYPE8) ((w) & 0xff))
-#define _MSB(w)  ((__TYPE8) ((w) >> 8U))
-#define lowByte(w) ((__TYPE8) ((w) & 0xff))
-#define highByte(w) ((__TYPE8) ((w) >> 8))
+#define _BV(n) (1 << (n))
+#define _LSB(w) ((uint8_t)((w) & 0xff))
+#define _MSB(w) ((uint8_t)((w) >> 8U))
+#define lowByte(w) ((uint8_t)((w) & 0xff))
+#define highByte(w) ((uint8_t)((w) >> 8))
 #define bitSet(value, bit) ((value) |= (1UL << (bit)))
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))

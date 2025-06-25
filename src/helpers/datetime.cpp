@@ -13,7 +13,7 @@ double now_in_seconds()
 }
 
 
-double now_sec()
+double now_sec()   
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);

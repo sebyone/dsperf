@@ -9,7 +9,7 @@
 #include <sys/socket.h>  // Macros and structures to use sockets
 #include <netinet/in.h>  // Definitions for the internet protocol family
 #include <netinet/tcp.h> // defines macros for use as a socket option
-// #include <arpa/inet.h>
+                         // #include <arpa/inet.h>
 
 #elif defined(__windows__)
 
@@ -26,9 +26,7 @@
 #include "../helpers/datetime.h"
 
 extern options_t Settings; // options_t Settings;
-double vars[VARS_COUNTER];           // computed values for enum ipv4tcp_vars
-
-
+double vars[VARS_COUNTER]; // computed values for enum ipv4tcp_vars
 
 // -------------------------------------------------------------------------------------------------------- !
 ret_t ipv4tcp_bandwidth(int ifn, long &_dband) // computes bandwidth for local interface
@@ -76,7 +74,6 @@ void print_outs(frm_stuffs_e _switch)
 
     case _OUTS_SUMMARY:
         printf("\n[SUMMARY RUN %d/%d]\n", (int)vars[_tstcounter], (int)vars[_tstcounter]);
-
         printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(vars[_blocksize]));
         printf("  Protocol:           %s\n", TEST_MODEL_NAME);
         // printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
@@ -95,7 +92,6 @@ void print_outs(frm_stuffs_e _switch)
         printf("  Throughput: %.3f Mbps\n", vars[_throughput]);
         // printf("  Throughput:         %.3f MB/s     | %.3f Mbps\n", out_throughput_Mbytes, out_throughput_Mbits);
         // printf("  Throughput (pps):   %.3f pps\n", out_throughput_pps);
-
         // printf("[CLIENT] Transfer Time: %.3f ms | Total Bytes: %d | Throughput: %.3f MB/s (%.3f Mbps)\n",
         //        elapsed_ms, bytes_sent, out_throughput_Mbytes, out_throughput_Mbits);
         break;
@@ -134,7 +130,7 @@ ret_t set_env_ipv4tcp()
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-// LOOPBACK SERVER
+// SERVER LOOPBACK
 // -------------------------------------------------------------------------------------------------------- !
 ret_t run_server_ipv4tcp(int nif_, int port_)
 {
@@ -165,7 +161,7 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
 
     if (listen(server_sock, 1) < 0)
     {
-        pverbose("Error IP Socket listen");
+        pverbose("Error IP Socket listen\n");
         close(server_sock);
         return rtOk;
     }
@@ -232,14 +228,12 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
     // int time = Settings.time;
     // bool __flag_time_defined = Settings.time_defined;
 
-    // Bandwidth ?????????????????????????
-    // const uint64_t target_bitrate_bps = 10 * 1024 * 1024 * 8; // 10 Mbps (Megabits) _10Mps
-
     // related to model's stuffs
     int pkt_payload_size;
     int pkt_header_size = 40; // TCP/IP standard header
-    double efficiency;
-    double pkts_to_send;
+
+    // double efficiency;
+    // double pkts_to_send;
 
     int mss = 0; // packet's payload size
     char *pkt_payload;
@@ -275,6 +269,7 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
         .sin_family = AF_INET,
         .sin_port = htons(port_),
     };
+
     inet_pton(AF_INET, server_ip_, &serv_addr.sin_addr);
 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
@@ -288,7 +283,7 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
 
     socklen_t optlen = sizeof(vars[_pktpayload]); // mss = PAYLOAD !!!!!!!!!!!!!
 
-    if (!Settings.mtu_specified)
+    if (!Settings.mss_specified)
     {
         getsockopt(sock, IPPROTO_TCP, TCP_MAXSEG, &vars[_pktpayload], &optlen);
         vars[_pktheader] = 40;
@@ -341,146 +336,19 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
             vars[_pktssent]++;
         }
 
-        // Computes vars
+        // Results vars
         vars[_ttime] = (get_time_microseconds() - start_time) / 1000; // ms
         vars[_datasent] = vars[_blocksize];
         vars[_throughput] = _Byte2Megabits(vars[_datasent]) / vars[_ttime] / 1000; // [Mbps]
 
+        // Bandwidth ?????????????????????????
+        // const uint64_t target_bitrate_bps = 10 * 1024 * 1024 * 8; // 10 Mbps (Megabits) _10Mps
+
         // Prints out vars
-        if (Settings.csv_format)
-        {
-            print_outs(_OUTS_SUMMARY);
-        }
-        else
-        {
-            print_outs(_OUTS_CSV_ROW);
-        }
+        print_outs(Settings.csv_format ? _OUTS_SUMMARY : _OUTS_CSV_ROW);
     }
 
     free(packet);
     close(sock);
     return rtOk;
 }
-
-/*
-// Scambio RTT
-char ping_buf[5] = {0};
-ssize_t ping_len = recv(client_sock, ping_buf, sizeof(ping_buf), 0);
-if (ping_len == sizeof(ping_buf) && strcmp(ping_buf, "PING") == 0)
-{
-    if (send(client_sock, "PONG", 5, 0) != 5)
-    {
-        perror("[SERVER] Errore invio PONG");
-        free(buffer);
-        close(client_sock);
-        continue;
-    }
-}
-else
-{
-    fprintf(stderr, "[SERVER] Ping non ricevuto correttamente\n");
-    free(buffer);
-    close(client_sock);
-    continue;
-}
-*/
-
-/*
-
-    int to_send;
-
-    if (__flag_time_defined) // Runs in time-mode
-    {
-        // curr_time < end_time_def
-        while ((curr_time < end_time_def))
-        {
-            to_send = pkt_payload_size;
-            if (send(sock, pkt_payload, to_send, 0) > 0)
-                break;
-            curr_time = get_time_microseconds();
-        }
-    }
-    else // runs in block-size mode
-    {
-
-        while ((bytes_sent < block_size))
-        {
-            if (!dsperf_timer_wait_tick(timer)) // Semaphore
-            {
-                break;
-            }
-            to_send = block_size - bytes_sent;
-            if (to_send > pkt_payload_size)
-                to_send = pkt_payload_size;
-
-            // to_send = pkt_payload_size;
-            if ((sent = send(sock, pkt_payload, pkt_payload_size, 0)) <= 0)
-                break;
-            bytes_sent += sent;
-            pkts_counter++;
-        }
-    }
-
-    double end_time = get_time_microseconds();
-
-    dsperf_timer_stop(timer);
-    dsperf_timer_destroy(timer);
-
-    double elapsed_ms = (end_time - start_time) / 1000; // us -> ms
-    double elapsed_s = elapsed_ms / 1000;
-
-    // Dopo aver effettuato il test, posso ottenere il numero di pacchetti persi soltanto ricevendo il numero effettivo che ha raggiunto il server
-    // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!!
-    (per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket !!!)
-
-        double out_throughput_Mbytes = (_Byte2Megabyte(bytes_sent) / (double)elapsed_s); // / (elapsed_ms / (double)1000); // Ottengo Mega byte per secondo
-    double out_throughput_Mbits = out_throughput_Mbytes * (double)8;                     // Ottengo Mega bit per secondo
-    double out_throughput_pps = (double)pkts_counter / elapsed_s;
-
-    int out_bytes_to_send = block_size; // Total byte to send
-    int out_bytes_lost = out_bytes_to_send - bytes_sent;
-
-    double out_bytes_lost_percents = out_bytes_to_send > 0 ? ((double)out_bytes_lost / out_bytes_to_send) * 100.0 : 0.0;
-
-    /*
-    if (csv_enabled == 1)
-        fclose(csv);
-    */
-// usleep(1000); // TODO: utilizzare opzione per attivare il ritardo
-
-/* Solo se flag selezionato !!!!!!!
-FILE *csv = fopen(csv_path, i == 0 ? "w" : "a");
-int csv_enabled = 1;
-if (!csv)
-{
-    csv_enabled = 0;
-}
-
-if (i == 0 && csv_enabled == 1)
-    fprintf(csv, "Timestamp_ms,Num Pkt,Dimensione Pkt,Throughput_MBps,RTT_ms\n");
-
-char ping_msg[] = "PING";
-char pong_msg[5] = {0};
-
-double rtt_ms = 0;
-double ping_start = get_time_microseconds();
-if (send(sock, ping_msg, sizeof(ping_msg), 0) != sizeof(ping_msg))
-{
-    perror("[CLIENT] Error sending PING");
-}
-else
-{
-    ssize_t r = recv(sock, pong_msg, sizeof(pong_msg), 0);  // Bloccante !!!!!!!!!!
-
-    if (r != sizeof(pong_msg) || strcmp(pong_msg, "PONG") != 0)
-    {
-        fprintf(stderr, "[CLIENT] Invalid PONG response\n");
-    }
-    else
-    {
-        double ping_end = get_time_microseconds();
-        rtt_ms = (ping_end - ping_start) / 1000.0;
-        // printf("[CLIENT] RTT misurato: %.3f ms\n", rtt_ms);
-    }
-}
-*/

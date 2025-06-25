@@ -5,7 +5,30 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "version.h"
+
 extern options_t Settings;
+
+// -------------------------------------------------------------------------------------------------------- !
+void clearSettings()
+{
+    memset(&Settings, 0, sizeof(&Settings));
+    Settings.host_role = -1;
+    Settings.model = -1;
+    Settings.block_size = 0;
+    Settings.mss_specified = false;
+    Settings.pkt_payload = 1500;
+    Settings.repetitions = 1;
+    Settings.pkts_num = 1;
+    Settings.csv_enabled = false;
+    Settings.csv_no_header = false;
+    Settings.version = false;
+    Settings.port = 0;
+    Settings.remote_din = -1;
+    Settings.remote_addr[0] = '\0';
+    Settings.model_path[0] = '\0';
+    Settings.csv_path[0] = '\0';
+}
 
 // -------------------------------------------------------------------------------------------------------- !
 void print_usage(const char *prog_name)
@@ -19,7 +42,7 @@ void print_usage(const char *prog_name)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-void print_options(const char *prog_name)
+void print_help(const char *prog_name)
 {
     printf("\nOptions:\n");
     printf("  -S [port]              Run in server mode (default port: 8080)\n");
@@ -38,25 +61,21 @@ void print_options(const char *prog_name)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
+void print_version(const char *prog_name)
+{
+    printf("\n");
+    printf("dsperf v %d.%d.%d \n", PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH);
+    printf("2024, 2025 (@) Sebyone Srl\n");
+    printf("\n\n");
+}
+
+// -------------------------------------------------------------------------------------------------------- !
 ret_t parse_args(int argc, char *argv[])
 {
+    int option_index = 0;
+    int c;
 
-    memset(&Settings, 0, sizeof(&Settings));
-    Settings.host_role = -1;
-    Settings.model = -1;
-    Settings.block_size = 0;
-    Settings.mtu_specified = false;
-    Settings.pkt_payload = 1500;
-    Settings.repetitions = 1;
-    Settings.pack_num = 1;
-    Settings.csv_enabled = false;
-    Settings.csv_no_header = false;
-    Settings.version = false;
-    Settings.port = 0;
-    Settings.remote_din = -1;
-    Settings.remote_addr[0] = '\0';
-    Settings.model_path[0] = '\0';
-    Settings.csv_path[0] = '\0';
+    clearSettings();
 
     static struct option long_options[] = {
         {"underlay", no_argument, 0, 1},
@@ -64,14 +83,11 @@ ret_t parse_args(int argc, char *argv[])
         {"blocksize", required_argument, 0, 3},
         {0, 0, 0, 0}};
 
-    int option_index = 0;
-    int c;
-
     while ((c = getopt_long(argc, argv, "S:s:n:c:m:f:t:y:v", long_options, &option_index)) != -1)
     {
         switch (c)
         {
-        case 'S':
+        case 'S': // Server
             if (Settings.host_role != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both -S and -s\n");
@@ -105,7 +121,7 @@ ret_t parse_args(int argc, char *argv[])
             }
             break;
 
-        case 's':
+        case 's': // Client
             if (Settings.host_role != -1)
             {
                 fprintf(stderr, "Error: Cannot specify both -S and -s\n");
@@ -140,9 +156,10 @@ ret_t parse_args(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
+
         case 'c':
-            Settings.pack_num = atoi(optarg);
-            if (Settings.pack_num < 1)
+            Settings.pkts_num = atoi(optarg);
+            if (Settings.pkts_num < 1)
             {
                 fprintf(stderr, "Error: packet number must be >= 1\n");
                 exit(EXIT_FAILURE);
@@ -150,7 +167,7 @@ ret_t parse_args(int argc, char *argv[])
             break;
 
         case 'm':
-            Settings.mtu_specified = true;
+            Settings.mss_specified = true;
             Settings.pkt_payload = atoi(optarg);
             if (Settings.pkt_payload < 1)
             {
@@ -190,7 +207,8 @@ ret_t parse_args(int argc, char *argv[])
         break;
 
         case 'v':
-            Settings.version = true;
+            Settings.version = true; // ????
+            print_version();
             break;
 
         case 1: // --underlay
@@ -229,33 +247,28 @@ ret_t parse_args(int argc, char *argv[])
     return rtOk;
 }
 
-
 // -------------------------------------------------------------------------------------------------------- !
 ret_t validate_args(const char *prog_name)
 {
     // Controlli base
     if (Settings.host_role == -1)
     {
-        fprintf(stderr, "Error: Must specify either -S (server) or -s (client)\n");
+        fprintf(stderr, "Error: must specify either -S (server) or -s (client)\n");
         return rtExit;
     }
     if (Settings.model == -1)
     {
-        fprintf(stderr, "Error: Must specify either --underlay or --daas\n");
+        fprintf(stderr, "Error: must specify either --underlay or --daas\n");
         return rtExit;
     }
 
-    // Per server: accetta solo parametri base
-    if (Settings.host_role == 0)
+    if (Settings.host_role == 0) /// -1 = unset, 0 = server, 1 = client 2 = router
     {
-        // Se model non è definito, proviamo a dedurlo dall'argomento di -S
-        if (Settings.model == 0)
+        if (Settings.model == 0) // Se model non è definito, proviamo a dedurlo dall'argomento di -S
         {
-            // -S deve essere porta
-            if (Settings.port == 0)
+            if (Settings.port == 0) // -S deve essere porta
             {
-                // Se non settata ancora, proviamo a convertire da remote_addr (tmp)
-                if (Settings.remote_addr[0] != '\0')
+                if (Settings.remote_addr[0] != '\0') // Se non settata ancora, proviamo a convertire da remote_addr (tmp)
                 {
                     Settings.port = atoi(Settings.remote_addr);
                     if (Settings.port <= 0)
@@ -273,8 +286,8 @@ ret_t validate_args(const char *prog_name)
         }
         else if (Settings.model == 1)
         {
-            // -S deve essere remote_din
-            if (Settings.remote_din < 0)
+
+            if (Settings.remote_din < 0) // -S deve essere remote_din
             {
                 if (Settings.remote_addr[0] != '\0')
                 {
@@ -293,8 +306,7 @@ ret_t validate_args(const char *prog_name)
             }
         }
 
-        // Verifica che non siano presenti opzioni non ammesse per server
-        if (Settings.block_size != 0)
+        if (Settings.block_size != 0) // Verifica che non siano presenti opzioni non ammesse per server
         {
             fprintf(stderr, "Error: Server must not specify --blocksize\n");
             return rtExit;
@@ -314,21 +326,18 @@ ret_t validate_args(const char *prog_name)
             fprintf(stderr, "Error: Server must not specify -y (csv header control)\n");
             return rtExit;
         }
-        if (Settings.mtu_specified)
+        if (Settings.mss_specified)
         {
             fprintf(stderr, "Error: Server must not specify -m (mtu)\n");
             return rtExit;
         }
     }
 
-    // Per client: deve avere tutti i parametri corretti
-    if (Settings.host_role == 1)
+    if (Settings.host_role == 1) // Per client: deve avere tutti i parametri corretti
     {
-        // Verifica model e argomenti collegati
-        if (Settings.model == 0)
+        if (Settings.model == 0) // Verifica model e argomenti collegati
         {
-            // underlay: remote_addr deve essere IP:PORT
-            if (Settings.remote_addr[0] == '\0')
+            if (Settings.remote_addr[0] == '\0') // underlay: remote_addr deve essere IP:PORT
             {
                 fprintf(stderr, "Error: Client must specify IP:PORT for underlay\n");
                 return rtExit;
@@ -336,8 +345,7 @@ ret_t validate_args(const char *prog_name)
         }
         else if (Settings.model == 1)
         {
-            // daas: remote_din >= 0
-            if (Settings.remote_din < 0)
+            if (Settings.remote_din < 0) // daas: remote_din >= 0
             {
                 if (Settings.remote_addr[0] != '\0')
                 {
@@ -366,14 +374,12 @@ ret_t validate_args(const char *prog_name)
             fprintf(stderr, "Error: repetitions must be >= 1\n");
             return rtExit;
         }
-        if (Settings.mtu_specified && Settings.pkt_payload < 1)
+        if (Settings.mss_specified && Settings.pkt_payload < 1)
         {
             fprintf(stderr, "Error: MTU must be >= 1\n");
             return rtExit;
         }
-
-        // csv_path se csv_enabled deve essere valorizzato
-        if (Settings.csv_enabled && Settings.csv_path[0] == '\0')
+        if (Settings.csv_enabled && Settings.csv_path[0] == '\0') // csv_path se csv_enabled deve essere valorizzato
         {
             fprintf(stderr, "Error: CSV output enabled but no file specified\n");
             return rtExit;
