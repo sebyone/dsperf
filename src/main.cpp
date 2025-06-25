@@ -36,7 +36,7 @@
 #include "version.h"
 #include "options.h"
 
-extern options_t Settings; // options_t Settings;
+//options_t Settings; // options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])

@@ -29,7 +29,8 @@
 #define _1GB ((__TYPE64)1) << 30
 
 #define _Byte2Megabyte(b) ((__TYPE64)(b) / (1 << 20))
-#define _Byte2Megabits(b) ((__TYPE64)(b << 3) / (1 << 20))
+//#define _Byte2Megabits(b) ((__TYPE64)(b << 3) / (1 << 20))
+#define _Byte2Megabits(b) (((__TYPE64)(b) << 3) / (1 << 20))
 #define _MegaByte2Megabits(b) ((__TYPE64)(b << 3))
 
 // Bitwise

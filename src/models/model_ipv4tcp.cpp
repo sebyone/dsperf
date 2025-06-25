@@ -9,7 +9,7 @@
 #include <sys/socket.h>  // Macros and structures to use sockets
 #include <netinet/in.h>  // Definitions for the internet protocol family
 #include <netinet/tcp.h> // defines macros for use as a socket option
-// #include <arpa/inet.h>
+#include <arpa/inet.h>
 
 #elif defined(__windows__)
 
@@ -25,7 +25,7 @@
 #include "../helpers/timers.h"
 #include "../helpers/datetime.h"
 
-extern options_t Settings; // options_t Settings;
+//options_t Settings; // options_t Settings;
 double vars[VARS_COUNTER];           // computed values for enum ipv4tcp_vars
 
 
@@ -103,7 +103,11 @@ void print_outs(frm_stuffs_e _switch)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t set_env_ipv4tcp()
+ret_t get_env_ipv4tcp(netif_t& if_) {
+    //TODO:Va implementato
+    return rtOk;
+}
+ret_t set_env_ipv4tcp(netif_t& if_)
 {
     char ip[64];
     int port;
@@ -198,8 +202,8 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
         pverbose("[TCP/IP] Negotiated mss [%d] bytes \n", curr_mss);
 
         int total_received = 0;
-        double start = get_time_microseconds();
-
+        //double start = get_time_microseconds();
+        double start = now_sec();
         while (1) // Receiving time-out or connection closed !!!!!!!!!!!!!
         {
             ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
@@ -208,7 +212,8 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
             total_received += recvd;
         }
 
-        double seconds = (get_time_microseconds() - start) / 1e6;
+        //double seconds = (get_time_microseconds() - start) / 1e6;
+        double seconds = now_sec() - start;
         double throughput = (seconds > 0) ? (total_received / (1024.0 * 1024.0) / seconds) : 0;
 
         // pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n", , seconds, total_received, throughput);
@@ -327,7 +332,8 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
     {
         vars[_pktssent] = 0;
         int bytes2send = vars[_blocksize];
-        double start_time = get_time_microseconds();
+        //double start_time = get_time_microseconds();
+        double start_time = now_sec();
         while (bytes2send)
         {
             if (bytes2send >= vars[_pktpayload])
@@ -342,7 +348,8 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
         }
 
         // Computes vars
-        vars[_ttime] = (get_time_microseconds() - start_time) / 1000; // ms
+        //vars[_ttime] = (get_time_microseconds() - start_time) / 1000; // ms
+        vars[_ttime] = (now_sec() - start_time) * 1000; // ms
         vars[_datasent] = vars[_blocksize];
         vars[_throughput] = _Byte2Megabits(vars[_datasent]) / vars[_ttime] / 1000; // [Mbps]
 
