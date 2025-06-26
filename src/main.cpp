@@ -34,19 +34,24 @@
  */
 
 #include "version.h"
+#include "locals.h"
+// Modules
+#include "models/model_ipv4tcp.h"
+#include "models/model_daasfrs.h"
+//
 #include "options.h"
 
-//options_t Settings; // options_t Settings;
+// options_t Settings; // options_t Settings;
 
 // -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
 {
     parse_args(argc, argv);
-
     if (validate_args(argv[0]) != rtOk)
     {
         return EXIT_FAILURE;
     }
+    // Settings.model = TEST_IPV4TCP;      // Forces !
 
     switch (Settings.model)
     {
@@ -59,7 +64,7 @@ int main(int argc, char *argv[])
             set_env_ipv4tcp(myif);
             if (Settings.host_role == 0) // 0 = server, 1 = client
             {
-                run_server_ipv4tcp(0,Settings.port);
+                run_server_ipv4tcp(0, Settings.port);
             }
             else
             {

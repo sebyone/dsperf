@@ -57,7 +57,7 @@ void print_outs(frm_stuffs_e _switch)
 
     case _OUTS_CSV_ROW:
         printf("'%d/%d\t", vars[_tstcounter]);
-        printf("%.3f\t", _Byte2Megabyte(vars[_blocksize]));
+        printf("%.3f\t", _Byte2Megabyte( vars[_blocksize] ));
         printf("%s\t", TEST_MODEL_NAME);
         printf("%d\t", vars[_pktpayload]);
         printf("%d\t", vars[_pktheader]);

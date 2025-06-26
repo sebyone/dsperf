@@ -14,21 +14,25 @@ options_t Settings;
 void clearSettings()
 {
     memset(&Settings, 0, sizeof(&Settings));
-    Settings.host_role = -1;
-    Settings.model = -1;
-    Settings.block_size = 0;
+
+    Settings.version = false; // Common options
+    Settings.host_role = -1;  // Client / Server
+    Settings.model = -1;      // Test model
+    Settings.repetitions = 1;
+
+    Settings.csv_enabled = false; // Common output options
+    Settings.csv_no_header = false;
+    Settings.csv_path[0] = '\0';
+    Settings.model_path[0] = '\0';
+
+    Settings.block_size = 0; // Specific test model Traffic
     Settings.mss_specified = false;
     Settings.pkt_payload = 1500;
-    Settings.repetitions = 1;
     Settings.pkts_num = 1;
-    Settings.csv_enabled = false;
-    Settings.csv_no_header = false;
-    Settings.version = false;
-    Settings.port = 0;
+
+    Settings.port = 0; // Specific IP options
     Settings.remote_din = -1;
     Settings.remote_addr[0] = '\0';
-    Settings.model_path[0] = '\0';
-    Settings.csv_path[0] = '\0';
 }
 
 // -------------------------------------------------------------------------------------------------------- !
@@ -43,7 +47,7 @@ void print_usage(const char *prog_name)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-void print_help(const char *prog_name)
+void print_help()
 {
     printf("\nOptions:\n");
     printf("  -S [port]              Run in server mode (default port: 8080)\n");
@@ -62,7 +66,7 @@ void print_help(const char *prog_name)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-void print_version(const char *prog_name)
+void print_version()
 {
     printf("\n");
     printf("dsperf v %d.%d.%d \n", PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH);
@@ -78,75 +82,68 @@ ret_t parse_args(int argc, char *argv[])
 
     clearSettings();
 
-    static struct option long_options[] = {
-        {"underlay", no_argument, 0, 1},
-        {"daas", required_argument, 0, 2},
-        {"blocksize", required_argument, 0, 3},
-        {0, 0, 0, 0}};
+    static struct option long_options[] = {// "--" (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
+                                           {"underlay", no_argument, 0, 1},
+                                           {"daas", required_argument, 0, 2},
+                                           {"blocksize", required_argument, 0, 3}, // *name, has_arg, *flag, val
+                                           {"help", required_argument, 0, 4},
+                                           {0, 0, 0, 0}}; // Serve ?
 
     while ((c = getopt_long(argc, argv, "S:s:n:c:m:f:t:y:v", long_options, &option_index)) != -1)
     {
         switch (c)
         {
-        case 'S': // Server
-            if (Settings.host_role != -1)
+        case 'S': // host_role
+        case 's':
+            if (Settings.host_role != -1) // Already setted
             {
-                fprintf(stderr, "Error: Cannot specify both -S and -s\n");
+                fprintf(stderr, "error: can't specify both -S and -s !\n");
                 exit(EXIT_FAILURE);
             }
-            Settings.host_role = 0;
-            if (Settings.model == 0)
-            { // underlay: PORT
-                Settings.port = atoi(optarg);
-                if (Settings.port <= 0)
-                {
-                    fprintf(stderr, "Error: Invalid port number for server\n");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else if (Settings.model == 1)
-            {
-                Settings.remote_din = atoi(optarg);
-                if (Settings.remote_din < 0)
-                {
-                    fprintf(stderr, "Error: Invalid DIN for server\n");
-                    exit(EXIT_FAILURE);
-                }
-            }
-            else
-            {
-                // Layer mode non ancora definito: salvare comunque arg e fare check dopo
-                // Conserviamo il valore provvisorio in remote_addr o remote_din, controlliamo in validate
-                // Per semplicità: useremo remote_addr come buffer temporaneo per il valore
-                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
-            }
-            break;
 
-        case 's': // Client
-            if (Settings.host_role != -1)
+            Settings.host_role = (c == 's') ? _ROLE_CLIENT : _ROLE_SERVER;
+            if (Settings.host_role == _ROLE_SERVER)
             {
-                fprintf(stderr, "Error: Cannot specify both -S and -s\n");
-                exit(EXIT_FAILURE);
-            }
-            Settings.host_role = 1;
-            if (Settings.model == 0)
-            { // underlay: IP:PORT
-                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
-            }
-            else if (Settings.model == 1)
-            {
-                Settings.remote_din = atoi(optarg);
-                if (Settings.remote_din < 0)
+                if (Settings.model == _MODEL_IPV4)
                 {
-                    fprintf(stderr, "Error: Invalid DIN for client\n");
-                    exit(EXIT_FAILURE);
+                    // Local interface
+
+                    // Check port
+                    Settings.port = atoi(optarg);
+                    if (Settings.port <= 0)
+                    {
+                        fprintf(stderr, "Error: Invalid port number for server\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else if (Settings.model == _MODEL_DAAS)
+                {
+                    // Check daas local settings
                 }
             }
-            else
+            else // _ROLE_CLIENT
             {
-                // Layer mode non ancora definito: salvare in remote_addr e validare dopo
-                strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
+                if (Settings.model == _MODEL_IPV4)
+                {
+                    // Check host:port
+                    strncpy(Settings.remote_addr, optarg, sizeof(Settings.remote_addr) - 1);
+                    if (strlen(Settings.remote_addr) < 6)
+                    {
+                        fprintf(stderr, "error: invalid server address\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else if (Settings.model == _MODEL_DAAS)
+                {
+                    Settings.remote_din = atoi(optarg);
+                    if (Settings.remote_din <= 0)
+                    {
+                        fprintf(stderr, "error: invalid remote DIN  \n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
             }
+
             break;
 
         case 'n':
@@ -172,7 +169,7 @@ ret_t parse_args(int argc, char *argv[])
             Settings.pkt_payload = atoi(optarg);
             if (Settings.pkt_payload < 1)
             {
-                fprintf(stderr, "Error: MTU must be >= 1\n");
+                fprintf(stderr, "Error: 'mss' must be >= 1\n");
                 exit(EXIT_FAILURE);
             }
             break;
@@ -212,25 +209,26 @@ ret_t parse_args(int argc, char *argv[])
             print_version();
             break;
 
-        case 1: // --underlay
-            if (Settings.model != -1)
-            {
-                fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
-                exit(EXIT_FAILURE);
-            }
-            Settings.model = 0;
-            break;
+            /*
+                    case 1: // --underlay
+                        if (Settings.model != -1)
+                        {
+                            fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        Settings.model = 0;
+                        break;
 
-        case 2: // --daas
-            if (Settings.model != -1)
-            {
-                fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
-                exit(EXIT_FAILURE);
-            }
-            Settings.model = 1;
-            strncpy(Settings.model_path, optarg, sizeof(Settings.model_path) - 1);
-            break;
-
+                    case 2: // --daas
+                        if (Settings.model != -1)
+                        {
+                            fprintf(stderr, "Error: Cannot specify both --underlay and --daas\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        Settings.model = 1;
+                        strncpy(Settings.model_path, optarg, sizeof(Settings.model_path) - 1);
+                        break;
+            */
         case 3: // --blocksize
             Settings.block_size = atoi(optarg);
             if (Settings.block_size < 1)
@@ -238,6 +236,10 @@ ret_t parse_args(int argc, char *argv[])
                 fprintf(stderr, "Error: blocksize must be >= 1\n");
                 exit(EXIT_FAILURE);
             }
+            break;
+
+        case 4: // --help
+            print_help();
             break;
 
         default:
@@ -252,6 +254,7 @@ ret_t parse_args(int argc, char *argv[])
 ret_t validate_args(const char *prog_name)
 {
     // Controlli base
+    /*
     if (Settings.host_role == -1)
     {
         fprintf(stderr, "Error: must specify either -S (server) or -s (client)\n");
@@ -307,7 +310,7 @@ ret_t validate_args(const char *prog_name)
             }
         }
 
-        if (Settings.block_size != 0) // Verifica che non siano presenti opzioni non ammesse per server
+        if (Settings.block_size != 0) // Verifica che non siano presenti opzioni non ammesse
         {
             fprintf(stderr, "Error: Server must not specify --blocksize\n");
             return rtExit;
@@ -333,10 +336,11 @@ ret_t validate_args(const char *prog_name)
             return rtExit;
         }
     }
+*/
 
-    if (Settings.host_role == 1) // Per client: deve avere tutti i parametri corretti
+    if (Settings.host_role == _ROLE_CLIENT) // Per client: deve avere tutti i parametri corretti
     {
-        if (Settings.model == 0) // Verifica model e argomenti collegati
+        if (Settings.model == _MODEL_IPV4) // Verifica model e argomenti collegati
         {
             if (Settings.remote_addr[0] == '\0') // underlay: remote_addr deve essere IP:PORT
             {
@@ -344,7 +348,7 @@ ret_t validate_args(const char *prog_name)
                 return rtExit;
             }
         }
-        else if (Settings.model == 1)
+        else if (Settings.model == _MODEL_DAAS)
         {
             if (Settings.remote_din < 0) // daas: remote_din >= 0
             {

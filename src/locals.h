@@ -26,6 +26,7 @@
 // Setting --------------------------------------------------
 
 #undef WITH_DAAS
+
 #undef DEBUG
 #define VERBOSE
 
@@ -56,6 +57,44 @@ typedef enum
     rtExit = 1, // stdlib EXIT_FAILURE 1
     rtErr = 2   // Generic error
 } ret_t;
+
+// Data Structures for local hardware resources
+//
+typedef struct // local interfaces
+{
+    char *ifname;     // name as OS reported "eth", "wlan", ...
+    double bandwidth; // nominal Speed: 50000Mb/s
+
+    /*
+  $ ethtool eth0
+    Settings for eth0:
+    Supported ports: [ FIBRE ]
+    Supported link modes:   25000baseCR/Full, 50000baseCR2/Full
+    Supported pause frame use: Symmetric Receive-only
+    Supports auto-negotiation: Yes
+    Supported FEC modes: RS	 BASER	 LLRS
+    Advertised link modes:  25000baseCR/Full
+                            50000baseCR2/Full
+    Advertised pause frame use: Symmetric
+    Advertised auto-negotiation: Yes
+    Advertised FEC modes: Not reported
+    Link partner advertised link modes:  Not reported
+    Link partner advertised pause frame use: Symmetric
+    Link partner advertised auto-negotiation: No
+    Link partner advertised FEC modes: Not reported
+    Speed: 50000Mb/s
+    Lanes: 2
+    Duplex: Full
+    Auto-negotiation: on
+    Port: FIBRE
+    PHYAD: 0
+    Transceiver: internal
+    netlink error: Operation not permitted
+    Current message level: 0x00002081 (8321)
+                           drv tx_err hw
+    Link detected: yes
+    */
+} netif_t;
 
 /*
 #if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)

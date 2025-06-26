@@ -90,7 +90,9 @@ enum ipv4tcp_vars // Test Model Indicators
 
 #include "../helpers/utils.h"
 #include "../options.h"
-#include "../hardware.h"
+#include "../model.h"
+
+// ret_t get_interfaces(lnetif_t *ifs);
 
 ret_t get_env_ipv4tcp(netif_t &_nif); // returns interface information
 

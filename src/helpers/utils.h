@@ -25,9 +25,9 @@
 #define _1MB 1 << 20
 #define _1GB 1 << 30
 
-#define _Byte2Megabyte(b) ((__TYPE64)(b) / (1 << 20))
-#define _Byte2Megabits(b) ((__TYPE64)(b << 3) / (1 << 20))
-#define _MegaByte2Megabits(b) ((__TYPE64)(b << 3))
+#define _Byte2Megabyte(b) ((long int)(b) / (1 << 20))
+#define _Byte2Megabits(b) ((long int)(b << 3) / (1 << 20))
+#define _MegaByte2Megabits(b) ((long int )(b << 3))
 
 // Bitwise
 //
