@@ -8,7 +8,7 @@ if (args.layer_mode == 1)
 {
     if (!parse_daas_ini(args.model_path, &daas_setup))
     {
-        fprintf(stderr, "Error: Failed to parse .ini overlay file.\n");
+        pverbose(stderr, "Error: Failed to parse .ini overlay file.\n");
         return EXIT_FAILURE;
     }
 }
@@ -216,43 +216,43 @@ public:
             {
                 if (!file_exists)
                 {
-                    fprintf(file, "#/#\t");
-                    fprintf(file, "Data_Block_[MB]\t");
-                    fprintf(file, "Protocol\t");
-                    fprintf(file, "Pkt_Length_[bytes]\t");
-                    fprintf(file, "Header_[bytes]\t");
-                    fprintf(file, "Efficiency[%%]\t");
-                    fprintf(file, "Pkts_to_send\t");
-                    fprintf(file, "Pkt_sent\t");
-                    fprintf(file, "Pkt_loss\t");
-                    fprintf(file, "Data_Sent[MB]\t");
-                    fprintf(file, "Pkt_Err.[%%]\t");
-                    fprintf(file, "Transfer_Time_[ms]\t");
-                    fprintf(file, "Throughput_[MB/s]\t[Mb/s]\t[pps]\t");
-                    fprintf(file, "Sender_first_timestamp\t");
-                    fprintf(file, "Local_end_timestamp\t");
-                    fprintf(file, "Remote_first_timestamp\t");
-                    fprintf(file, "Remote_last_timestamp\n");
+                    pverbose(file, "#/#\t");
+                    pverbose(file, "Data_Block_[MB]\t");
+                    pverbose(file, "Protocol\t");
+                    pverbose(file, "Pkt_Length_[bytes]\t");
+                    pverbose(file, "Header_[bytes]\t");
+                    pverbose(file, "Efficiency[%%]\t");
+                    pverbose(file, "Pkts_to_send\t");
+                    pverbose(file, "Pkt_sent\t");
+                    pverbose(file, "Pkt_loss\t");
+                    pverbose(file, "Data_Sent[MB]\t");
+                    pverbose(file, "Pkt_Err.[%%]\t");
+                    pverbose(file, "Transfer_Time_[ms]\t");
+                    pverbose(file, "Throughput_[MB/s]\t[Mb/s]\t[pps]\t");
+                    pverbose(file, "Sender_first_timestamp\t");
+                    pverbose(file, "Local_end_timestamp\t");
+                    pverbose(file, "Remote_first_timestamp\t");
+                    pverbose(file, "Remote_last_timestamp\n");
                 }
 
-                fprintf(file, "%d\t", 1);
-                fprintf(file, "%.3f\t", (double)block_size / 1.024e6);
-                fprintf(file, "IPv4\t");
-                fprintf(file, "%d\t", dperf_info.remote_pkt_counter > 0 ? (block_size / dperf_info.remote_pkt_counter) : 0);
-                fprintf(file, "40\t");
+                pverbose(file, "%d\t", 1);
+                pverbose(file, "%.3f\t", (double)block_size / 1.024e6);
+                pverbose(file, "IPv4\t");
+                pverbose(file, "%d\t", dperf_info.remote_pkt_counter > 0 ? (block_size / dperf_info.remote_pkt_counter) : 0);
+                pverbose(file, "40\t");
                 double efficiency = ((double)block_size / (block_size + 40 * dperf_info.remote_pkt_counter)) * 100.0;
-                fprintf(file, "%.3f\t", efficiency);
-                fprintf(file, "%.3f\t", (double)block_size / (block_size / (dperf_info.remote_pkt_counter > 0 ? dperf_info.remote_pkt_counter : 1)));
-                fprintf(file, "%d\t", dperf_info.remote_pkt_counter);
-                fprintf(file, "%d\t", packets - dperf_info.remote_pkt_counter);
-                fprintf(file, "%.3f\t", (double)dperf_info.remote_data_counter / 1.024e6);
-                fprintf(file, "%.3f\t", error_pct);
-                fprintf(file, "%llu\t", (unsigned long long)elapsed);
-                fprintf(file, "%.3f\t%.3f\t%.3f\t", throughput_MBps, throughput_Mbps, throughput_pps);
-                fprintf(file, "%.3f\t", (double)dperf_info.sender_first_timestamp);
-                fprintf(file, "%.3f\t", (double)dperf_info.local_end_timestamp);
-                fprintf(file, "%.3f\t", (double)dperf_info.remote_first_timestamp);
-                fprintf(file, "%.3f\n", (double)dperf_info.remote_last_timestamp);
+                pverbose(file, "%.3f\t", efficiency);
+                pverbose(file, "%.3f\t", (double)block_size / (block_size / (dperf_info.remote_pkt_counter > 0 ? dperf_info.remote_pkt_counter : 1)));
+                pverbose(file, "%d\t", dperf_info.remote_pkt_counter);
+                pverbose(file, "%d\t", packets - dperf_info.remote_pkt_counter);
+                pverbose(file, "%.3f\t", (double)dperf_info.remote_data_counter / 1.024e6);
+                pverbose(file, "%.3f\t", error_pct);
+                pverbose(file, "%llu\t", (unsigned long long)elapsed);
+                pverbose(file, "%.3f\t%.3f\t%.3f\t", throughput_MBps, throughput_Mbps, throughput_pps);
+                pverbose(file, "%.3f\t", (double)dperf_info.sender_first_timestamp);
+                pverbose(file, "%.3f\t", (double)dperf_info.local_end_timestamp);
+                pverbose(file, "%.3f\t", (double)dperf_info.remote_first_timestamp);
+                pverbose(file, "%.3f\n", (double)dperf_info.remote_last_timestamp);
 
                 fclose(file);
             }

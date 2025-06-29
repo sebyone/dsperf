@@ -54,9 +54,6 @@
 // ipv4_tcp
 #define PACKET_BUFFER_MAX_SIZE 2048
 //
-#define MIN_PORT 1
-#define MAX_PORT 65535
-//
 #define MAX_LINE_LEN 256
 #define MAX_LINKS 5
 #define MAX_REMOTE_LINKS 64
@@ -70,7 +67,6 @@ typedef enum
 } frm_stuffs_e;
 
 #define VARS_COUNTER 13
-
 enum ipv4tcp_vars // Test Model Indicators
 {
     _tstcounter = 0, // test executions
@@ -98,8 +94,8 @@ ret_t get_env_ipv4tcp(netif_t &_nif); // returns interface information
 
 ret_t set_env_ipv4tcp(netif_t &nif_); // uodates interface parameters
 
-ret_t run_server_ipv4tcp(int nif_, int port_); // start loopback server
+ret_t run_server_ipv4tcp(); // start loopback server
 
-ret_t run_client_ipv4tcp(char *server_ip_, int port_); // performs test
+ret_t run_client_ipv4tcp(); // performs test
 
 #endif // MODEL_IPV4TCP_H

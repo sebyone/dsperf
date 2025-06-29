@@ -19,8 +19,10 @@ extern "C"
 {
 #endif
 
-    double now_in_seconds();
-    double now_sec();
+    double now_millis();
+    double now_micros();
+    double now_seconds();
+  //  double now_sec();
 
 #ifdef __cplusplus
 }

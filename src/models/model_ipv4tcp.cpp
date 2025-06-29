@@ -26,6 +26,7 @@
 #include "../helpers/datetime.h"
 
 extern options_t Settings; // options_t Settings;
+
 double vars[VARS_COUNTER]; // computed values for enum ipv4tcp_vars
 
 // -------------------------------------------------------------------------------------------------------- !
@@ -56,8 +57,8 @@ void print_outs(frm_stuffs_e _switch)
         break;
 
     case _OUTS_CSV_ROW:
-        printf("'%d/%d\t", vars[_tstcounter]);
-        printf("%.3f\t", _Byte2Megabyte( vars[_blocksize] ));
+        printf("%d//%d\t", vars[_tstcounter]);
+        printf("%.3f\t", _Byte2Megabyte(vars[_blocksize]));
         printf("%s\t", TEST_MODEL_NAME);
         printf("%d\t", vars[_pktpayload]);
         printf("%d\t", vars[_pktheader]);
@@ -77,7 +78,7 @@ void print_outs(frm_stuffs_e _switch)
         printf("  Data Block:         %.3f MB\n", _Byte2Megabyte(vars[_blocksize]));
         printf("  Protocol:           %s\n", TEST_MODEL_NAME);
         // printf("  Packet Length:      %d bytes\n", vars[_pktlength]);
-        printf("  Header:             %d bytes\n", vars[_pktheader]);
+        printf("  Header:             %f bytes\n", vars[_pktheader]);
         printf("  Efficiency:         %.3f %%\n", vars[_efficiency]);
         printf("  Pkts to send:     %.3f\n", vars[_pktstosend]); // numero pacchetti da inviare
         break;
@@ -99,47 +100,23 @@ void print_outs(frm_stuffs_e _switch)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t get_env_ipv4tcp(netif_t& if_) {
-    //TODO:Va implementato
+ret_t get_env_ipv4tcp(netif_t &if_)
+{
+    // TODO:Va implementato
     return rtOk;
 }
-ret_t set_env_ipv4tcp(netif_t& if_)
+
+ret_t set_env_ipv4tcp(netif_t &if_)
 {
-    char ip[64];
-    int port;
-    const char *host = Settings.remote_addr;
-    const char *colon = strchr(host, ':');
-    if (colon == NULL)
-    {
-        fprintf(stderr, "[CLIENT] Invalid host format. Use IP:PORT\n");
-        return rtErr;
-    }
-
-    size_t ip_len = colon - host;
-    strncpy(ip, host, ip_len);
-    ip[ip_len] = '\0';
-    port = atoi(colon + 1);
-
-    if (port < MIN_PORT || port > MAX_PORT)
-    {
-        fprintf(stderr, "[CLIENT] Invalid port number: %d\n", port);
-        return rtErr;
-    }
-
-    if (!Settings.csv_format) // verbose mode options !!!
-    {
-        pverbose("dsperf started in client mode, loopback at  %s:%d \n", ip, port); // with %s size %d\n", ip, port, "block", test->block_size);
-    }
     return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
 // SERVER LOOPBACK
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_server_ipv4tcp(int nif_, int port_)
+ret_t run_server_ipv4tcp()
 {
     char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
-
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (server_sock < 0)
@@ -151,12 +128,12 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
     setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    memset(&addr, 0, sizeof(sockaddr_in));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port_);
+    addr.sin_port = htons(Settings.ipv4_port);
     addr.sin_addr.s_addr = INADDR_ANY; // Set interface addr
 
-    if (bind(server_sock, (const sockaddr *)&addr, sizeof(addr)) < 0)
+    if (bind(server_sock, (const sockaddr *)&addr, sizeof(sockaddr_in)) < 0)
     {
         perror("bind");
         close(server_sock);
@@ -167,10 +144,10 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
     {
         pverbose("Error IP Socket listen\n");
         close(server_sock);
-        return rtOk;
+        return rtErr;
     }
 
-    pverbose("[TCP/IP] Listen on port [%d]...\n", port_);
+    pverbose("[TCP/IP] Listen on ipv4_port [%d]...\n", Settings.ipv4_port);
 
     sockaddr peer_addr;
     socklen_t peer_addr_len = sizeof(peer_addr);
@@ -195,12 +172,12 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
             pverbose("[TCP/IP] Error can't negotiate mss \n");
             return rtErr;
         }
-        pverbose("[TCP/IP] Negotiated mss [%d] bytes \n", curr_mss);
+        pverbose("[TCP/IP] Negotiated mss to [%d] bytes \n", curr_mss);
 
-        int total_received = 0;
-        //double start = get_time_microseconds();
-        double start = now_sec();
-        while (1) // Receiving time-out or connection closed !!!!!!!!!!!!!
+        ssize_t total_received = 0;
+        // double start = get_time_microseconds();
+        double start = now_millis();
+        while (1) // Until time-out or connection closed !!!!!!!!!!!!!
         {
             ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
             if (recvd <= 0)
@@ -208,9 +185,9 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
             total_received += recvd;
         }
 
-        //double seconds = (get_time_microseconds() - start) / 1e6;
-        double seconds = now_sec() - start;
-        double throughput = (seconds > 0) ? (total_received / (1024.0 * 1024.0) / seconds) : 0;
+        // double seconds = (get_time_microseconds() - start) / 1e6;
+        // double elapsed = now_millis() - start;
+        //  double throughput = (elapsed > 0) ? (_Byte2Megabits(total_received)  / elapsed) : 0;
 
         // pverbose("[SERVER] Run %d - Time: %.6f s | Bytes: %d | Throughput: %.3f MB/s\n", , seconds, total_received, throughput);
         free(buffer);
@@ -225,28 +202,28 @@ ret_t run_server_ipv4tcp(int nif_, int port_)
 // -------------------------------------------------------------------------------------------------------- !
 // CLIENT
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_client_ipv4tcp(char *server_ip_, int port_)
+ret_t run_client_ipv4tcp()
 {
-    // size_t block_size = _test->block_size;
-    // size_t mtu = _test->pkt_payload;
 
-    // int time = Settings.time;
-    // bool __flag_time_defined = Settings.time_defined;
+    if (strlen(Settings.ipv4_addr) > 0) // (https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)
+    {
+        if (inet_network(Settings.ipv4_addr) <= 0)
+        {
+            pverbose("[CLIENT] Invalid IPv4 address: '%s'\n", Settings.ipv4_addr);
+            return rtErr;
+        }
+    }
 
-    // related to model's stuffs
-    int pkt_payload_size;
-    int pkt_header_size = 40; // TCP/IP standard header
+    if (Settings.ipv4_port < IPV4_MIN_SPORT || Settings.ipv4_port > IPV4_MAX_SPORT)
+    {
+        pverbose("[CLIENT] Invalid Service Port number: '%d'\n", Settings.ipv4_port);
+        return rtErr;
+    }
 
-    // double efficiency;
-    // double pkts_to_send;
-
-    int mss = 0; // packet's payload size
-    char *pkt_payload;
-
-    int sock = socket(AF_INET, SOCK_STREAM, 0); // Open socket
+    int sock = socket(AF_INET, SOCK_STREAM, 0); // Create socket IPv4/TCP (SOCK_STREAM)
     if (sock < 0)
     {
-        pverbose("Can't OPEN socket error!");
+        pverbose("Can't CREATE socket error!");
         return (rtErr);
     }
 
@@ -270,23 +247,25 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
     printf("mss: %d\n", curr_mss);
 #endif // ---
 
-    struct sockaddr_in serv_addr = {
-        .sin_family = AF_INET,
-        .sin_port = htons(port_),
-    };
-
-    inet_pton(AF_INET, server_ip_, &serv_addr.sin_addr);
-
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    sockaddr server_addr;
+    server_addr.sa_family = AF_INET;
+    inet_pton(server_addr.sa_family, Settings.ipv4_addr, &server_addr.sa_data);
+    if (connect(sock, &server_addr, sizeof(sockaddr)) < 0)
     {
         pverbose("Can't CONNECT socket error!");
         close(sock);
         return (rtErr);
     }
 
+    if (!Settings.csv_format) // verbose mode options !!!
+    {
+        pverbose("dsperf started in client mode, loopback at  %s:%d \n", Settings.ipv4_addr , Settings.ipv4_port ); // with %s size %d\n", ip, ipv4_port, "block", test->block_size);
+    }
+
     // Packet length settings (socket MSS negotiation !!!)
 
-    socklen_t optlen = sizeof(vars[_pktpayload]); // mss = PAYLOAD !!!!!!!!!!!!!
+    socklen_t optlen = vars[_pktpayload]; // mss = PAYLOAD !!!!!!!!!!!!!
+    // ip_opts optval;
 
     if (!Settings.mss_specified)
     {
@@ -301,19 +280,20 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
     }
 
     /// computes number of packets will be sended and protocol efficiency
-    if (vars[_pktpayload] >= Settings.block_size)
+    if ((size_t)vars[_pktpayload] >= Settings.block_size)
     {
         vars[_pktstosend] = 1;
     }
     else
     {
-        vars[_pktstosend] = trunc(Settings.block_size / vars[_pktpayload]) + (Settings.block_size % (int)vars[_pktpayload]);
+        vars[_pktstosend] = trunc(Settings.block_size / (size_t)vars[_pktpayload]) + (double)(Settings.block_size % (size_t)vars[_pktpayload]);
     }
     vars[_efficiency] = vars[_pktpayload] / (vars[_pktpayload] + vars[_pktheader]) * 100.0;
 
     // Allocates a packet's size buffer
-    char *packet = (char *)malloc((int)vars[_pktpayload]);
-    memset(packet, 'A', (int)vars[_pktpayload]);
+    const size_t buffersize = (size_t)vars[_pktpayload];
+    char *packet = (char *)malloc(buffersize);
+    memset(packet, 'A', buffersize);
 
     // Performs one or many tests...
     if (Settings.csv_format && !Settings.csv_no_header)
@@ -326,27 +306,28 @@ ret_t run_client_ipv4tcp(char *server_ip_, int port_)
     while (vars[_tstcounter]++ < Settings.repetitions)
     {
         vars[_pktssent] = 0;
-        int bytes2send = vars[_blocksize];
-        //double start_time = get_time_microseconds();
-        double start_time = now_sec();
+        ssize_t bytes2send = (ssize_t)vars[_blocksize];
+
+        // double start_time = get_time_microseconds();
+        double start_time = now_millis();
         while (bytes2send)
         {
-            if (bytes2send >= vars[_pktpayload])
+            if (bytes2send >= (ssize_t)vars[_pktpayload])
             {
-                bytes2send -= send(sock, packet, (size_t)vars[_pktpayload], (int)0); // (https://man7.org/linux/man-pages/man2/send.2.html)
+                bytes2send -= send(sock, packet, (size_t)(vars[_pktpayload]), 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
             }
             else
             {
-                bytes2send -= send(sock, packet, bytes2send, 0);
+                bytes2send -= send(sock, packet, (size_t)bytes2send, 0);
             }
             vars[_pktssent]++;
         }
 
         // Results vars
-        //vars[_ttime] = (get_time_microseconds() - start_time) / 1000; // ms
-        vars[_ttime] = (now_sec() - start_time) * 1000; // ms
+        // vars[_ttime] = (get_time_microseconds() - start_time) / 1000; // ms
+        vars[_ttime] = (now_millis() - start_time); // ms
         vars[_datasent] = vars[_blocksize];
-        vars[_throughput] = _Byte2Megabits(vars[_datasent]) / vars[_ttime] / 1000; // [Mbps]
+        vars[_throughput] = _Byte2Megabits(vars[_datasent]) / (vars[_ttime] * 1000); // [Mbps]
 
         // Bandwidth ?????????????????????????
         // const uint64_t target_bitrate_bps = 10 * 1024 * 1024 * 8; // 10 Mbps (Megabits) _10Mps

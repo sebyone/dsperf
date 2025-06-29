@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "helpers/utils.h"
 // Setting --------------------------------------------------
 
 #undef WITH_DAAS
@@ -30,10 +31,6 @@
 #undef DEBUG
 #define VERBOSE
 
-#define MIN_BLOCK_SIZE 1
-#define MAX_BLOCK_SIZE _1GB // 1GB
-#define MIN_PACKET_SIZE 1
-#define MAX_PACKET_SIZE 10 * _1MB // 10MB
 
 // ---------------------------------------------- END SETTINGS
 

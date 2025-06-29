@@ -21,7 +21,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 #target_include_directories( ${TARGET} PUBLIC ${INCLUDE_PATH} )
 #file( GLOB_RECURSE HPPS "${INCLUDE_PATH}/*.h" )
 file( GLOB_RECURSE HPPS "${SRC_DIR}/*.h" )
-file( GLOB_RECURSE CPPS "${SRC_DIR}/*.cpp" )
+file( GLOB_RECURSE CPPS "${SRC_DIR}/*.cpp" "${SRC_DIR}/*.c" )
 
 add_executable(${TARGET} ${CPPS} ${HPPS} )
 

@@ -36,11 +36,28 @@
 #define _ROLE_CLIENT 1
 //
 #define _MODEL_IPV4 1
+
+#define IPV4_MIN_MSS 256
+#define IPV4_MAX_MSS 1460
+
+#define IPV4_MIN_SPORT 0
+#define IPV4_MAX_SPORT 65535
+#define IPV4_DEF_SPORT 3000
+
+
+
 #define _MODEL_DAAS 2
 
+#define MIN_BLOCK_SIZE 1
+#define MAX_BLOCK_SIZE _1GB // 1GB
+
+
+
+
+#define _OPT_STR_LEN 256
 typedef struct
 {
-    bool version;             // ???
+    //bool version;             // ???
                               // ______Testing routine
     int model;                // -1 = unset,
                               // 3:0 = ipv4tcp (method flow&time for throughput test)
@@ -51,7 +68,7 @@ typedef struct
     int repetitions;          // repeats test, default 1
                               //
                               // ______Pkts based test
-    unsigned long block_size; // block size  (needs to be supported by model)
+    size_t block_size;        // block size  (needs to be supported by model)
     int pkt_payload;          // payload size (needs to be supported by model)
     int pkts_num;             // ???
     bool mss_specified;       // ???
@@ -61,19 +78,21 @@ typedef struct
                               //
                               // ______Print out options
     bool csv_enabled;         // enables formatter
-    char csv_path[256];       // output filename
+    char csv_path[_OPT_STR_LEN];       // output filename
     bool csv_format;          // ?
     bool csv_no_header;       // ?
                               //
                               // ______Underlay: IPv4
-    int port;                 // server con underlay: porta di ascolto
-    char remote_addr[256];    // client con underlay: IP:PORT stringa
-    int remote_din;           // client/server con daas: remote DIN (intero)
+    int ipv4_port;            // IPv4 Service Port
+    char ipv4_addr[_OPT_STR_LEN];      // IPv4 client:remote_addr, server:local-if_addr  
                               //
                               // ______Overlay: DaaS
-    char model_path[256];     // percorso file ini per daas
+    int remote_din;           // node to link
+    char model_path[_OPT_STR_LEN];     // path to configutation file (libdaas.ini)
 
 } options_t;
+
+
 
 void print_usage();
 
@@ -83,6 +102,6 @@ void print_version();
 
 ret_t parse_args(int argc, char *argv[]);
 
-ret_t validate_args(const char *prog_name);
+ret_t validate_options();
 
 #endif // OPTIONS_H

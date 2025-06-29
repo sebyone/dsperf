@@ -1,17 +1,17 @@
 #define _POSIX_C_SOURCE 200809L
 
-include "timers.h"
+#include "timers.h"
 
-#include <pthread.h>
-#include <pthread_time.h>
 
+// #include <pthread_time.h>
+/*
     double
     get_time_microseconds() // <pthread_time.h>
 {
     clock_gettime(CLOCK_MONOTONIC, &__ts);
     return __ts.tv_sec * 1e6 + __ts.tv_nsec / 1000;
 }
-
+*/
 static void *dsperf_timer_thread_func(void *arg)
 {
     dsperf_timer_t *t = (dsperf_timer_t *)arg;

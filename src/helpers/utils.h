@@ -21,13 +21,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 //
-#define _1KB 1 << 10
-#define _1MB 1 << 20
-#define _1GB 1 << 30
-
-#define _Byte2Megabyte(b) ((long int)(b) / (1 << 20))
-#define _Byte2Megabits(b) ((long int)(b << 3) / (1 << 20))
-#define _MegaByte2Megabits(b) ((long int )(b << 3))
+#define _1KB 2^10
+#define _1MB 2^20
+#define _1GB 2^30
+#define _Byte2Megabyte(b) ((double)(b) / (2^20))
+#define _Byte2Megabits(b) ((double)(b * 8) / (double)(2^20))
+#define _MegaByte2Megabits(b) ((long )(b *8 ))
 
 // Bitwise
 //

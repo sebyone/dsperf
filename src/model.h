@@ -102,7 +102,7 @@ public:
     virtual void resetEnv(void) = 0; // flushes buffers and release resources
 
     // Services
-    virtual int runLoopbackServer(URI *rUri) = 0; // returns: int sch !!!!!!!!!!!!!!!!!
+    virtual int runLoopbackServer() = 0; // returns: int sch !!!!!!!!!!!!!!!!!
     virtual int runTest(int isub_, unsigned char *buff, int maxSize) = 0;
 
     virtual int outReport(int isub_) = 0;

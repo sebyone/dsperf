@@ -1,4 +1,4 @@
-#include "hardware.h"
+#include "model.h"
 
 ret_t get_interfaces(lnetif_t *ifs)
 {

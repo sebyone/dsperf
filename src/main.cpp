@@ -41,17 +41,24 @@
 //
 #include "options.h"
 
-// options_t Settings; // options_t Settings;
+extern options_t Settings; 
 
 // -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
 {
-    parse_args(argc, argv);
-    if (validate_args(argv[0]) != rtOk)
+    
+    ret_t pcheck = parse_args(argc, argv);  // parsing arguments
+    if ( pcheck != rtOk )
     {
-        return EXIT_FAILURE;
+        return pcheck;
     }
-    // Settings.model = TEST_IPV4TCP;      // Forces !
+
+    pcheck = validate_options();   // validate options
+    if ( pcheck != rtOk) 
+    {
+        return pcheck;
+    }
+
 
     switch (Settings.model)
     {
@@ -64,11 +71,11 @@ int main(int argc, char *argv[])
             set_env_ipv4tcp(myif);
             if (Settings.host_role == 0) // 0 = server, 1 = client
             {
-                run_server_ipv4tcp(0, Settings.port);
+                run_server_ipv4tcp();
             }
             else
             {
-                run_client_ipv4tcp(Settings.remote_addr, Settings.port); // bandwidth
+                run_client_ipv4tcp(); // bandwidth
             };
             return EXIT_SUCCESS;
         }
@@ -79,7 +86,7 @@ int main(int argc, char *argv[])
     case 2:                          // MODEL: ipv4/udp
         if (Settings.host_role == 0) // 0 = server, 1 = client
         {
-            run_ipv4udp_server(Settings.port);
+            run_ipv4udp_server(Settings.ipv4_port);
         }
         else
         {
@@ -93,7 +100,7 @@ int main(int argc, char *argv[])
     case 7:                          // daas fresbee
         if (Settings.host_role == 0) // 0 = server, 1 = client
         {
-            run_server_ipv4tcp(Settings.port);
+            run_server_ipv4tcp(Settings.ipv4_port);
         }
         else
         {
