@@ -28,7 +28,7 @@
 #include <list>
 #include <vector>
 
-#include "../locals.h"
+#include "../globals.h"
 #include "datetime.h"
 
 

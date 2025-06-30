@@ -8,37 +8,64 @@
 
 #include "version.h"
 
-options_t Settings;
+#include "models/model_ipv4tcp.h"
+#include "models/model_daasfrs.h"
+//
+
+options_t Options; // global.h
+
+#define DSPERF_OPTIONS "S:s:b:n:c:m:f:t:y:v:V:h"
+
+static struct option long_options[] = { // "--" (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
+    {"ipv4", no_argument, 0, 1},
+    {"daas", required_argument, 0, 2},
+    {"v4udp", required_argument, 0, 3},
+    {"help", no_argument, 0, 4},
+    {0, 0, 0, 0}}; //
 
 // -------------------------------------------------------------------------------------------------------- !
-void clearSettings()
+void clearOptions()
 {
-    memset(&Settings, 0, sizeof(options_t));
+    memset(&Options, 0, sizeof(options_t));
 
-    //  Settings.version = false; // Common options
-    Settings.host_role = -1; // Client / Server
-    Settings.model = -1;     // Test model
-    Settings.repetitions = 1;
+    // Model
+    Options.model_protocol = _PROTO_NONE; // Test protocol (IPV4, DAAS, etc.etc.)
+    Options.model_class = __unsetted;     // Test class (Features, Capacity, etc.etc.)
 
-    Settings.csv_enabled = false; // Common output options
-    Settings.csv_no_header = false;
-    Settings.csv_path[0] = '\0';
-    Settings.model_path[0] = '\0';
+    // Run mode
+    Options.host_role = _ROLE_NONE; // client or loopback server
+    Options.repetitions = 1;        // repetitions counter
 
-    Settings.block_size = 0; // Specific test model Traffic
-    Settings.mss_specified = false;
-    Settings.pkt_payload = IPV4_MAX_MSS;
-    Settings.pkts_num = 1;
+    // Class: Caqpacity
+    Options.block_size = 0;  // Traffic by block-size
+    Options.pkts_num = 0;    // Traffic by packet number
+    Options.pkt_payload = 0; // Packet payload size
 
-    Settings.ipv4_addr[0] = '\0';
-    Settings.ipv4_port = IPV4_DEF_SPORT; // Specific IP options
+    // Formatting
+    Options.csv_enabled = false;   // print out in csv format
+    Options.csv_no_header = false; // print out csv columns header
+    Options.csv_path[0] = '\0';    // output file (default 'stdout')
 
-    Settings.remote_din = -1;
+    // Addressing
+    Options.service_num = 0;       // Service identifier (port for ipv4 stack)
+    Options.local_addr[0] = '\0';  // Local interface and address
+    Options.remote_addr[0] = '\0'; // Remote address to connect (used in client mode only)
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-void print_usage(const char *prog_name)
+void print_credits()
 {
+    printf("\ndsperf  %d.%d.%d\n", PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH);
+    printf("2024-2025 (@) Sebyone Srl\n");
+    printf("License MPL v.2.0 <https://mozilla.org/MPL/2.0/>\n");
+    printf("This Software is provided under this License on an 'as is' basis, without warranty of any kind.\n");
+    printf("This disclaimer of warranty constitutes an essential part of this License.\n");
+    printf("\n");
+}
+
+void print_usage() // const char *prog_name
+{
+    const char *prog_name = "dsperf";
     printf("Usage:\n");
     printf("\n");
     printf("  Loopback server: %s -S <local_ip:port> --ipv4|--daas -V\n", prog_name);
@@ -50,262 +77,200 @@ void print_usage(const char *prog_name)
 // -------------------------------------------------------------------------------------------------------- !
 void print_help()
 {
-    printf("\nOptions:\n");
-    printf("  -v                     Show dsperf details and exit\n");
-    printf("  -S <local_ip:port>     Start loopback server mode (default 127.0.0.1:%d)\n", IPV4_DEF_SPORT);
-    printf("  -V                     Server in verbose mode\n");
-    printf("  -s <remote_ip:port>    Start as client to test on loopback \n");
-    printf("  -i <local_ip:port>     Forces the client to use a specific interface ()\n");
+    printf("\nGeneral options\n");
+    printf("  -v                                Show dsperf details and exit\n");
+    printf("  -h, --help                        Show usage informations\n");
+    printf("  -l                                Lists local interface (require protocol specifications)\n");
+    printf("  -x                                Disable all system's messages\n");
+    printf("  -V                                Enable messages for the looping server events\n");
+
+    printf("\nRun mode");
+    printf("  -S <local_addr> <service>         Starts loopback server mode (if omitted uses default service/port)\n");
+    printf("  -s <remote_addr> <service>        Starts as client to test on loopback \n");
+    printf("  -i <local_interface/driver>       Forces to use a specific hardware interface (use -l to list availables)\n");
+    printf("  -n <repetitions>                  Repeats testing\n");
+    printf("  -t <period>                       Continuosly testing for time period [seconds] (max 8h)\n");
 
     printf("\nTraffic generator\n");
-    printf("  -b <bytes>             Data-block to transfer in bytes [%d-%d]  \n", MIN_BLOCK_SIZE, MAX_BLOCK_SIZE);
-    printf("  -p <bytes>             Packet's payload size in bytes [%d-%d] (tries to negotiate 'mss' in ipv4tcp)\n", IPV4_MIN_MSS, IPV4_MAX_MSS);
-    printf("  -c <count>             Number of packets to send (only with '-p')\n");
-    printf("  -n <repetitions>       Number of Test repetitions (only with ipv4tcp)\n");
+    printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
+    printf("  -c <count>                        Generates traffic trasferring number of packets with payload size fixed (use '-p')\n");
+    printf("  -p <bytes>                        Packet's payload size in bytes (tries to negotiate payload)\n");
 
-    printf("\nTesting models\n");
-    printf("  --ipv4                 Test IPv4/TCP underlay network (RFCs 790-791)\n");
-    printf("  --daas                 Use DaaS overlay mode\n");
+    printf("\nProtocol and Model\n");
+    printf("  --ipv4                            Uses IPv4/TCP underlay network (RFCs 790-791)\n");
+    printf("  --daas                            Uses DaaS overlay \n");
 
-    printf("\nFormatting\n");
-    printf("  -f <csv_file>          CSV file for results output (optional, client only)\n");
+    printf("\n  --capacity (default)\n");
+    printf("  --security\n");
+    printf("  --features (Capabilities)\n");
+    printf("  --continuity (Availability)\n");
 
+    printf("\nReporting\n");
+    printf("  -y <0/1>                          Outputs results in csv format: '1' no header, '0' with header (default)\n");
+    printf("  -f <filename>                     Outputs testing results in csv format to file (client only)\n");
     printf("\n");
-    printf("\tNote: commands in upper-case will be considered only in server mode.\n");
 
-    printf("\n");
-}
+    printf("\tNote: commands in upper-case will be available only in server mode.\n");
 
-// -------------------------------------------------------------------------------------------------------- !
-void print_version()
-{
-    printf("dsperf  %d.%d.%d\n", PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH);
-    printf("2024-2025 (@) Sebyone Srl\n\n");
-    printf("License MPL v.2.0 <https://mozilla.org/MPL/2.0/>\n");
-    printf("This Software is provided under this License on an 'as is' basis, without warranty of any kind.\n");
-    printf("This disclaimer of warranty constitutes an essential part of this License.\n");
     printf("\n");
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t parse_args(int argc, char *argv[])
+// Parsing
+// -------------------------------------------------------------------------------------------------------- !
+ret_t parse_args(int argc, char *argv[]) // Syntax validations
 {
     int option_index = 0;
     int c;
 
     if (argc < 2)
     {
-        print_version();
+        print_credits();
         print_usage(argv[0]);
         return rtExit;
     }
 
-    clearSettings();
+    clearOptions(); // Options
 
-    static struct option long_options[] = {// "--" (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
-                                           {"ipv4", no_argument, 0, 1},
-                                           {"daas", required_argument, 0, 2},
-                                           {"v4udp", required_argument, 0, 3},
-                                           {"help", no_argument, 0, 4},
-                                           {0, 0, 0, 0}}; //
-                                                          // {"blocksiz", required_argument, 0, 3}, // *name, has_arg, *flag, val
-
-    while ((c = getopt_long(argc, argv, "S:s:b:n:c:m:f:t:y:v:h", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, DSPERF_OPTIONS, long_options, &option_index)) != -1)
     {
         switch (c)
         {
-        case 'S': // host_role
+        case 'v': //  how dsperf details and exit
+            print_credits();
+            return rtExit;
+            break;
+
+        case 4: // --help
+        case 'h':
+            print_usage(argv[0]);
+            return rtExit;
+            break;
+
+        case 'l': // Show local interfaces for protocol
+        case 'x': // Disable all system's messages
+        case 'V': // Enable messages for the looping server events
+            pverbose(" '%s' unsupported options ! \n", c);
+            return rtErr;
+            break;
+
+        case 'S':
         case 's':
-            if (Settings.host_role != -1) // Already setted
+            if (Options.host_role != _ROLE_NONE) // Role already setted
             {
                 pverbose("error: can't specify both -S and -s !\n");
                 return rtErr;
-                // exit(EXIT_FAILURE);
             }
-
-            Settings.host_role = (c == 's') ? _ROLE_CLIENT : _ROLE_SERVER;
-
-            if (Settings.host_role == _ROLE_SERVER)
+            size_t salen = strlen(optarg); // <addr_remote>
+            if (c == 's')                  // _ROLE_CLIENT
             {
-
-                if (Settings.model == _MODEL_IPV4)
+                Options.host_role = _ROLE_CLIENT;
+                if (salen > 0 && salen >= _OPT_STR_LEN)
                 {
-                    // Local interface ????????????????????????????????????????
-                    // Settings.ipv4_addr
-
-                    Settings.ipv4_port = atoi(optarg); // Check ipv4_port
-                    if (Settings.ipv4_port <= 0)
-                    {
-                        pverbose("Error: invalid IPv4 Service Port number !\n");
-                        return rtErr;
-                    }
+                    pverbose("error: invalid <addr_remote> parameter ! \n");
+                    return rtErr;
                 }
-                else if (Settings.model == _MODEL_DAAS)
-                {
-                    // Check daas local settings
-                }
+                strncpy(Options.remote_addr, optarg, salen);
             }
-            else // _ROLE_CLIENT
+            if (c == 'S') // _ROLE_SERVER
             {
-                if (Settings.model == _MODEL_IPV4)
+                Options.host_role = _ROLE_SERVER;
+
+                if (salen > 0 && salen >= _OPT_STR_LEN)
                 {
-                    // Check host:port
-
-                    size_t salen = strlen(optarg);
-                    char *psaddr = (char *)malloc(salen);
-
-                    strncpy(psaddr, optarg, salen);
-                    char *psport = strchr(psaddr, ':');
-
-                    if (psport == NULL)
-                    {
-                        pverbose("[CLIENT] Invalid host format. Use IP:PORT\n");
-                        return rtErr;
-                    }
-                    else
-                    {
-                        size_t slen = (size_t)(psaddr - psport);
-                        if (slen < _OPT_STR_LEN)
-                        {
-                            strncpy(Settings.ipv4_addr, psaddr, slen);
-                            Settings.ipv4_addr[slen] = '\0';
-                            psport++; // Skip ':'
-                            Settings.ipv4_port = atoi(psport);
-                        }
-                        else
-                        {
-                        }
-                    }
-
-                    if (strlen(Settings.ipv4_addr) < 6)
-                    {
-                        pverbose("error: invalid server address\n");
-                        return rtErr;
-                    }
+                    pverbose("error: invalid <addr_local> parameter ! \n");
+                    return rtErr;
                 }
-
-                else if (Settings.model == _MODEL_DAAS)
-                {
-                    Settings.remote_din = atoi(optarg);
-                    if (Settings.remote_din <= 0)
-                    {
-                        pverbose("error: invalid remote DIN  \n");
-                        return rtErr;
-                    }
-                }
+                strncpy(Options.local_addr, optarg, salen);
             }
-
             break;
 
-        case 'n':
-            Settings.repetitions = atoi(optarg);
-            if (Settings.repetitions < 1)
+        case 'i': // Forces to use a specific hardware interface
+            pverbose(" '%s' unsupported options ! \n", c);
+            return rtErr;
+            break;
+
+        case 'n': // Repetitions
+            Options.repetitions = atoi(optarg);
+            if (Options.repetitions < 1)
             {
                 pverbose("Error: repetitions must be >= 1\n");
-                // exit(EXIT_FAILURE);
                 return rtErr;
             }
             break;
 
-        case 'c':
-            Settings.pkts_num = atoi(optarg);
-            if (Settings.pkts_num < 1)
+        case 'b': // Traffic block size
+            long bs = atol(optarg);
+            if (bs < 1)
+            {
+                pverbose("Error: blocksize must be > 0\n");
+                return rtErr;
+            }
+            else
+                Options.block_size = bs;
+            break;
+
+        case 'c': // Traffic pkts number
+            long pn = atol(optarg);
+            if (pn < 1)
             {
                 pverbose("Error: packet number must be >= 1\n");
                 return rtErr;
             }
+            else
+                Options.pkts_num = pn;
             break;
 
-        case 'm':
-            Settings.mss_specified = true;
-            Settings.pkt_payload = atoi(optarg);
-            if (Settings.pkt_payload < 1)
+        case 'p': // Packet's payload size in bytes
+            long pp = atol(optarg);
+            if (pp < 1)
             {
-                pverbose("Error: 'mss' must be >= 1\n");
+                pverbose("error: packet's payload size must be > 0\n");
                 return rtErr;
             }
+            else
+                Options.pkt_payload = pp;
             break;
 
         case 'f':
-
-            Settings.csv_enabled = true;
-            strncpy(Settings.csv_path, optarg, sizeof(Settings.csv_path) - 1);
+            Options.csv_enabled = true;
+            strncpy(Options.csv_path, optarg, sizeof(Options.csv_path) - 1);
             break;
 
         case 't':
-        {
-            Settings.time_defined = true;
-            int val = atoi(optarg);
-            Settings.time = val;
-            break;
-        }
-
-        case 'y':
-        {
-            Settings.csv_format = true;
-            Settings.csv_no_header = false;
-
-            int val = atoi(optarg);
-            if (val != 0 && val != 1)
+            unsigned tt = atoi(optarg);
+            if (tt > 1 && tt << 8 * 3600)
+                Options.testing_time = tt;
+            else
             {
-                pverbose("Errore: il valore per --csv-no-header (-y) deve essere 0 o 1.\n");
-                return rtErr;
-            }
-
-            Settings.csv_no_header = (val == 1);
-        }
-        break;
-
-        case 'v': //  Show version information and exit
-
-            print_version();
-            return rtExit;
-            break;
-
-            /*
-                    case 1: // --underlay
-                        if (Settings.model != -1)
-                        {
-                            pverbose(stderr, "Error: Cannot specify both --underlay and --daas\n");
-                            exit(EXIT_FAILURE);
-                        }
-                        Settings.model = 0;
-                        break;
-
-                    case 2: // --daas
-                        if (Settings.model != -1)
-                        {
-                            pverbose(stderr, "Error: Cannot specify both --underlay and --daas\n");
-                            exit(EXIT_FAILURE);
-                        }
-                        Settings.model = 1;
-                        strncpy(Settings.model_path, optarg, sizeof(Settings.model_path) - 1);
-                        break;
-            */
-
-        case 'b': // --blocksize
-            Settings.block_size = (unsigned)atol(optarg);
-            if (Settings.block_size < 1)
-            {
-                pverbose("Error: blocksize must be >= 1\n");
+                pverbose("error: testing time period not valid '-t %s' ! \n", optarg);
                 return rtErr;
             }
             break;
 
-        case 3: // --ipv4
-
-            // Set model
-
+        case 'y': // Enables output in csv format: '1' no header, '0' with header (default)
+            Options.csv_format = true;
+            Options.csv_no_header = false;
+            if (strlen(optarg) > 1)
+            {
+                pverbose("error: formatting options '-y %s' unknown ! \n", optarg);
+                return rtErr;
+            }
+            else
+                Options.csv_no_header = (atoi(optarg) == 1);
             break;
 
-        case 4:   // --help
-        case 'h': // --help
-            print_help();
-            return rtExit;
+        case 1: // --ipv4
+            Options.model_protocol == _PROTO_IPV4;
+            break;
+
+        case 2: // --daas
+            Options.model_protocol == _PROTO_DAAS;
             break;
 
         default:
-            pverbose("Unknown option\n");
+            pverbose("error: unknow options '%s' !\n", c);
+            print_help();
             return rtErr;
         }
     }
@@ -313,144 +278,55 @@ ret_t parse_args(int argc, char *argv[])
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-ret_t validate_options()
+// Validation
+// -------------------------------------------------------------------------------------------------------- !
+ret_t validate_model_options(exe_t &_pfrun)
 {
-    // Controlli base
-    /*
-    if (Settings.host_role == -1)
+
+    if (Options.model_protocol == _PROTO_NONE && Options.host_role == _ROLE_NONE) // Model and Protocol ok !
     {
-        pverbose(stderr, "Error: must specify either -S (server) or -s (client)\n");
-        return rtExit;
-    }
-    if (Settings.model == -1)
-    {
-        pverbose(stderr, "Error: must specify either --underlay or --daas\n");
-        return rtExit;
+        pverbose("error: specify protocol and run mode !\n");
+        print_usage();
+        return rtErr;
     }
 
-    if (Settings.host_role == 0) /// -1 = unset, 0 = server, 1 = client 2 = router
+    if ((Options.block_size > 0 || (Options.pkts_num > 0 && Options.pkt_payload > 0))) // Model class "Capacity" ok !
     {
-        if (Settings.model == 0) // Se model non è definito, proviamo a dedurlo dall'argomento di -S
-        {
-            if (Settings.port == 0) // -S deve essere porta
-            {
-                if (Settings.ipv4_addr[0] != '\0') // Se non settata ancora, proviamo a convertire da ipv4_addr (tmp)
-                {
-                    Settings.port = atoi(Settings.ipv4_addr);
-                    if (Settings.port <= 0)
-                    {
-                        pverbose(stderr, "Error: Invalid port number for server\n");
-                        return rtExit;
-                    }
-                }
-                else
-                {
-                    pverbose(stderr, "Error: Server port not specified\n");
-                    return rtExit;
-                }
-            }
-        }
-        else if (Settings.model == 1)
-        {
-
-            if (Settings.remote_din < 0) // -S deve essere remote_din
-            {
-                if (Settings.ipv4_addr[0] != '\0')
-                {
-                    Settings.remote_din = atoi(Settings.ipv4_addr);
-                    if (Settings.remote_din < 0)
-                    {
-                        pverbose(stderr, "Error: Invalid DIN for server\n");
-                        return rtExit;
-                    }
-                }
-                else
-                {
-                    pverbose(stderr, "Error: Server DIN not specified\n");
-                    return rtExit;
-                }
-            }
-        }
-
-        if (Settings.block_size != 0) // Verifica che non siano presenti opzioni non ammesse
-        {
-            pverbose(stderr, "Error: Server must not specify --blocksize\n");
-            return rtExit;
-        }
-        if (Settings.repetitions != 1)
-        {
-            pverbose(stderr, "Error: Server must not specify -n (repetitions)\n");
-            return rtExit;
-        }
-        if (Settings.csv_enabled)
-        {
-            pverbose(stderr, "Error: Server must not specify -f (csv output)\n");
-            return rtExit;
-        }
-        if (Settings.csv_no_header)
-        {
-            pverbose(stderr, "Error: Server must not specify -y (csv header control)\n");
-            return rtExit;
-        }
-        if (Settings.mss_specified)
-        {
-            pverbose(stderr, "Error: Server must not specify -m (mtu)\n");
-            return rtExit;
-        }
+        if (Options.model_class == __unsetted)
+            Options.model_class == __Capacity; // defaul capacity
     }
-*/
-
-    if (Settings.host_role == _ROLE_CLIENT) // Per client: deve avere tutti i parametri corretti
+    else // check others classes
     {
-        if (Settings.model == _MODEL_IPV4) // Verifica model e argomenti collegati
-        {
-            if (Settings.ipv4_addr[0] == '\0') // underlay: ipv4_addr deve essere IP:PORT
-            {
-                pverbose("Error: Client must specify IP:PORT for underlay\n");
-                return rtExit;
-            }
-        }
-        else if (Settings.model == _MODEL_DAAS)
-        {
-            if (Settings.remote_din < 0) // daas: remote_din >= 0
-            {
-                if (Settings.ipv4_addr[0] != '\0')
-                {
-                    Settings.remote_din = atoi(Settings.ipv4_addr);
-                    if (Settings.remote_din < 0)
-                    {
-                        pverbose("Error: Invalid DIN for client\n");
-                        return rtExit;
-                    }
-                }
-                else
-                {
-                    pverbose("Error: Client DIN not specified\n");
-                    return rtExit;
-                }
-            }
-        }
+        pverbose("error: invalid parameters for test class !\n");
+        print_help();
+        return rtErr;
+    }
 
-        if (Settings.block_size < 1)
+    if (Options.host_role == _ROLE_CLIENT && (strlen(Options.remote_addr) == 0)) // Server ok !
+    {
+        pverbose("error: specify remote address !\n");
+        print_help();
+        return rtErr;
+    }
+
+    switch (Options.model_protocol)
+    {
+    case _PROTO_IPV4:
+
+        set_env_ipv4tcp(Options);
+
+        if (Options.host_role == _ROLE_SERVER)
         {
-            pverbose("Error: Client must specify --blocksize >= 1\n");
-            return rtExit;
+            _pfrun = &run_server_ipv4tcp()((int)0);
         }
-        if (Settings.repetitions < 1)
+        else // _ROLE_CLIENT
         {
-            pverbose("Error: repetitions must be >= 1\n");
-            return rtExit;
-        }
-        if (Settings.mss_specified && Settings.pkt_payload < 1)
-        {
-            pverbose("Error: MTU must be >= 1\n");
-            return rtExit;
-        }
-        if (Settings.csv_enabled && Settings.csv_path[0] == '\0') // csv_path se csv_enabled deve essere valorizzato
-        {
-            pverbose("Error: CSV output enabled but no file specified\n");
-            return rtExit;
-        }
+            run_client_ipv4tcp(); // bandwidth
+        };
+        break;
+
+    case _PROTO_DAAS:
+        break;
     }
 
     return rtOk;

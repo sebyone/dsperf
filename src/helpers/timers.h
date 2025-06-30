@@ -18,7 +18,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-// #include <time.h>
+// #include <testing_time.h>
 #include <pthread.h>
 
 
@@ -52,7 +52,7 @@ extern "C"
     // Stop timer (wait for the internal thread)
     void dsperf_timer_stop(dsperf_timer_t *t);
 
-    // the client calls this function to wait for the time
+    // the client calls this function to wait for the testing_time
     // returns true if timer is active, false otherwise
     bool dsperf_timer_wait_tick(dsperf_timer_t *t);
 

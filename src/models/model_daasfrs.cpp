@@ -87,17 +87,17 @@ void run_daasfrs_client(daas_setup_t *daas_setup, options_t *test)
 
     // first mapped din for semplicity
     /*
-    din_t remote_din = node->listNodes()[0];
-    printf("Remote Din: %i\n", remote_din);
+    din_t remote_addr = node->listNodes()[0];
+    printf("Remote Din: %i\n", remote_addr);
     */
-    din_t remote_din = test->remote_din;
+    din_t remote_addr = test->remote_addr;
 
-    if (node->locate(remote_din) != ERROR_NONE)
+    if (node->locate(remote_addr) != ERROR_NONE)
         return;
     for (int i = 0; i < repetitions; i++)
     {
         printf("Sending Test: %i\n", i + 1);
-        node->frisbee_dperf(remote_din, pkts_num, block_size, 0);
+        node->frisbee_dperf(remote_addr, pkts_num, block_size, 0);
         usleep(1000000);
     }
 

@@ -18,53 +18,21 @@
  *
  */
 
-#ifndef LOCALS_H
-#define LOCALS_H
+#ifndef HARDWARE_H
+#define HARDWARE_H
 
 #pragma once
 
-#include "helpers/utils.h"
-// Setting --------------------------------------------------
+#include "globals.h"
 
-#undef WITH_DAAS
+#include <stdlib.h>
 
-#undef DEBUG
-#define VERBOSE
-
-
-// ---------------------------------------------- END SETTINGS
-
-#define noexec void(0)
-
-#ifdef VERBOSE
-#define pverbose printf
-#else
-#define pverbose noexec
-#endif
-
-#ifdef DEBUG
-#define pdebug printf
-#else
-#define pdebug noexec
-#endif
-
-typedef enum
+typedef struct
 {
-    rtOk = 0,   // No error
-    rtExit = 1, // stdlib EXIT_FAILURE 1
-    rtErr = 2   // Generic error
-} ret_t;
-
-// Data Structures for local hardware resources
-//
-typedef struct // local interfaces
-{
-    char *ifname;     // name as OS reported "eth", "wlan", ...
-    double bandwidth; // nominal Speed: 50000Mb/s
-
+    int number;
     /*
   $ ethtool eth0
-    Settings for eth0:
+    Options for eth0:
     Supported ports: [ FIBRE ]
     Supported link modes:   25000baseCR/Full, 50000baseCR2/Full
     Supported pause frame use: Symmetric Receive-only
@@ -91,24 +59,6 @@ typedef struct // local interfaces
                            drv tx_err hw
     Link detected: yes
     */
-} netif_t;
+} hwif_t, *phwif_t;
 
-/*
-#if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
-#include <unistd.h>
-#include <getopt.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <arpa/inet.h>
-#include <sys/time.h>
-#include <time.h>
-#endif
-
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-*/
-
-#endif // LOCALS_H
+#endif // HARDWARE_H

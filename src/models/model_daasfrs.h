@@ -48,7 +48,7 @@
 
 #include "../locals.h"
 
-ret_t get_daasfrs_info(); // return test model information (string)
+ret_t get_daasfrs_info(); // return test model_protocol information (string)
 
 ret_t check_daasfrs();
 

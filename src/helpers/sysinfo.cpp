@@ -61,7 +61,7 @@ void get_cpu_model(char *buffer, unsigned int size) {
     }
     char line[256];
     while (fgets(line, sizeof(line), fp)) {
-        if (strncmp(line, "model name", 10) == 0) {
+        if (strncmp(line, "model_protocol name", 10) == 0) {
             char *colon = strchr(line, ':');
             if (colon) {
                 colon += 2;

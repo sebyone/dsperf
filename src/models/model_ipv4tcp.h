@@ -21,8 +21,8 @@
  * - windows porting
  * - check um and throughput calc
  * - compute bandwidth and throughput % as: throughput / bandwidth * 100
- * - model multi-threading ( socket shared )
- * - model time-windowed
+ * - model_protocol multi-threading ( socket shared )
+ * - model_protocol testing_time-windowed
  *
  */
 
@@ -44,58 +44,20 @@
 #ifndef MODEL_IPV4TCP_H
 #define MODEL_IPV4TCP_H
 
-#define TEST_IPV4TCP 1                   // IP sub 6 (TCP)
-#define TEST_IPV4TCP_CLASS TEST_CAPACITY // Capabilities, Availability, Capacity, Security
-
-#define TEST_MODEL_NAME "IPv4/TCP"
-#define TEST_MODEL_INFO "Throughput/Bandwidth v.01a"
-#define TEST_MODEL_LINK "developers@sebyone.it"
-
-// ipv4_tcp
-#define PACKET_BUFFER_MAX_SIZE 2048
-//
-#define MAX_LINE_LEN 256
-#define MAX_LINKS 5
-#define MAX_REMOTE_LINKS 64
-#define LINK_MAX_VAL 6
-typedef enum
-{
-    _OUTS_CSV_HEADER = 1, // header
-    _OUTS_CSV_ROW,        // simple line
-    _OUTS_SUMMARY,
-    _OUTS_SUMMARY_ROW
-} frm_stuffs_e;
-
-#define VARS_COUNTER 13
-enum ipv4tcp_vars // Test Model Indicators
-{
-    _tstcounter = 0, // test executions
-    _blocksize,      // "data to send" traffic block size [MB]
-    _protocol,       // TEST_MODEL_NAME - Setted
-    _pktpayload,     //  packet payload size header not included [bytes]
-    _pktheader,      // Header [bytes]   - 17 bytes IP header + sub-protocol options 0..34 bytes
-    _efficiency,     // Efficiency [%]   - ratio: [%] = payload / total_packet_size ( header+payload )
-    _pktstosend,     // Pkts to send
-    _pktssent,       // Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
-    _pktsloss,       // Pkt loss       - ???????????????????????
-    _datasent,       // Data Sent [MB] -
-    _pktserror,      // Pkt Err.[%]
-    _ttime,          // Transfer Time [ms]
-    _throughput      // Throughput [MBps]  [Mbps] [pps]
-};
-
 #include "../helpers/utils.h"
-#include "../options.h"
 #include "../model.h"
 
-// ret_t get_interfaces(lnetif_t *ifs);
 
-ret_t get_env_ipv4tcp(netif_t &_nif); // returns interface information
+ret_t set_env_ipv4tcp(options_t &ops_)  // set default Options values for model
 
-ret_t set_env_ipv4tcp(netif_t &nif_); // uodates interface parameters
+ret_t get_hwif_ipv4tcp(netif_t &_nif); // returns interface information
 
-ret_t run_server_ipv4tcp(); // start loopback server
+// ret_t set_env_ipv4tcp(netif_t &nif_); // updates interface parameters
 
-ret_t run_client_ipv4tcp(); // performs test
+ret_t run_server_ipv4tcp(int arg); // start loopback server
+
+ret_t run_client_ipv4tcp(int arg); // performs test
+
+
 
 #endif // MODEL_IPV4TCP_H

@@ -1,4 +1,3 @@
-
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
@@ -34,64 +33,69 @@
  *
  */
 
-/* ------------------------------------------------------------------------------------------------------------------------------
-
-       ISO-OSI                      IEEE 802.x
-+-----------------------+   +---------------------------------------+
-| 7.Application layer   |   |                                       |
-+-----------------------+   |                                       |
-| 6.Presentation layer  |   |                                       |
-+-----------------------+   |                                       |
-| 5.Session layer       |   |         Upper layer protocols         |
-+-----------------------+   |                                       |
-| 4.Transport layer     |   |                                       |
-+-----------------------+   |                                       |
-| 3.Network layer       |   |                                       |
-+-----------------------+   +---------------------------------------+
-| 2.Data link layer     |   |       Logical link control (LLC)      |
-|                       |   |       Medium access control (MAC)     |
-+-----------------------+   +---------------------------------------+
-| 1.Physical layer      |   |                                       |
-+-----------------------+   +---------------------------------------+
-
-IEEE 802.1	    LAN Protocols Working Group
-IEEE 802.3	    Ethernet
-IEEE 802.11	    WLAN (Wireless LAN) Wi-Fi certification & Mesh
-IEEE 802.15.3   UWB (ultra wideband, ultra-wide band and ultraband) very low energy level radio technology for short-range
-IEEE 802.15.4   PAN (personal area network) Low-Rate wireless e.g., Zigbee, WirelessHART, MiWi, etc.
-IEEE 802.15.6   BAN (body area network),WBAN (wireless body area network), BSN (body sensor network), MBAN (medical body area network)
-IEEE 802.21     MIH (Media Independent Handoff) / DaaS
- ------------------------------------------------------------------------------------------------------------------------------ */
-
-#ifndef HARDWARE_H
-#define HARDWARE_H
+#ifndef MODELS_H
+#define MODELS_H
 
 #pragma once
 
-#include "locals.h"
+#include "globals.h"
 
 #include <stdlib.h>
 #include <vector>
 
+typedef struct
+{
+    nproto_t nproto;
+    tclass_t tclass;
+    unsigned nmodel;
+    const char *title;
+    const char *info;
+    const char *team;
+} model_info_t, *pmodel_info_t;
+
+typedef enum
+{
+    _OUTS_CSV_HEADER = 1, // header
+    _OUTS_CSV_ROW,        // simple line
+    _OUTS_SUMMARY,
+    _OUTS_SUMMARY_ROW
+} report_item_t;
+
+// ------------------------------------------------------------------------
+// MODEL CLASS CAPACITY
+// ------------------------------------------------------------------------
+
+#define _CAPACITY_KEYS_COUNTER 13 // TODO: usare struct !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+enum capacity_keys                // Class Model Keys
+{
+    _tstcounter = 0, //  1. test executions
+    _blocksize,      //  2. Traffic block size [MB]
+    _protocol,       //  3. TEST_MODEL_NAME - Setted
+    _pktpayload,     //  4. Payload size [bytes]
+    _pktheader,      //  5. Header [bytes]
+    _efficiency,     //  6. Efficiency [%]   - ratio: [%] = payload / packet_size ( header+payload )
+    _pktstosend,     //  7. Pkts to send
+    _pktssent,       //  8. Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
+    _pktsloss,       //  9. Pkt loss       - ???????????????????????
+    _datasent,       // 10. Data Sent [Mb]
+    _pktserror,      // 11. Pkt Err.[%]
+    _ttime,          // 12. Transfer Time [ms]
+    _throughput      // 13. Throughput [Mbps]
+};
+
+typedef double capacity_vars_t[_CAPACITY_KEYS_COUNTER];
+
+void report_capacity(pmodel_info_t model_, capacity_vars_t &vars_, report_item_t switch_);
 
 // ------------------------------------------------------------------------------------------------------------------------------!
-// Generic model 
 
-typedef enum : unsigned
-{
-    _PROTO_NONE = 0, // Not defined
-    _PROTO_DAAS,     // DaaS-IoT
-    _PROTO_IPV4,     // IP stack
-    _PROTO_WLAN
-} proto_t;
-
-class IModel // Abstract model to test network
+class ITestModel // Abstract test model_protocol
 {
 public:
-    // Pure virtual
-    virtual ~IModel() {}; // force to invoke specialized destructor
+    // Pure virtual constructor
+    virtual ~ITestModel() {}; // force to invoke specialized destructor
 
-    virtual unsigned listInterfaces(int &_iflist) = 0; // return list of available media interfaces
+    virtual unsigned listInterfaces(int &_iflist) = 0; // returns available local hardware for protocol
 
     // Configure
     virtual int getOptions(int isub_, const unsigned char *buff, int size) = 0;
@@ -105,13 +109,12 @@ public:
     virtual int runLoopbackServer() = 0; // returns: int sch !!!!!!!!!!!!!!!!!
     virtual int runTest(int isub_, unsigned char *buff, int maxSize) = 0;
 
-    virtual int outReport(int isub_) = 0;
+private:
+    virtual int report(int isub_) = 0;
 };
-
-// ------------------------------------------------------------------------------------------------------------------------------!
 
 typedef std::vector<netif_t> lnetif_t;
 
-ret_t get_interfaces(lnetif_t *ifs); // Returns a list of availaible local interfaces ( )
+ret_t get_hwif_ipv4tcp(lnetif_t *ifs); // Returns a list of availaible local interfaces ( )
 
-#endif // HARDWARE_H
+#endif // MODELS_H

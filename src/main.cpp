@@ -34,92 +34,23 @@
  */
 
 #include "version.h"
-#include "locals.h"
-// Modules
-#include "models/model_ipv4tcp.h"
-#include "models/model_daasfrs.h"
-//
+#include "globals.h"
+
 #include "options.h"
 
-extern options_t Settings; 
-
-// -------------------------------------------------------------------------------------------------------- !
 int main(int argc, char *argv[])
 {
-    
-    ret_t pcheck = parse_args(argc, argv);  // parsing arguments
-    if ( pcheck != rtOk )
+    print_credits();
+    ret_t pcheck = parse_args(argc, argv); // parsing arguments
+    if (pcheck != rtOk)
     {
         return pcheck;
     }
-
-    pcheck = validate_options();   // validate options
-    if ( pcheck != rtOk) 
+    exe_t frun = NULL;
+    pcheck = validate_model_options(frun); // validate parsed options values
+    if (pcheck != rtOk)
     {
         return pcheck;
     }
-
-
-    switch (Settings.model)
-    {
-
-#ifdef TEST_IPV4TCP
-    case TEST_IPV4TCP: // TEST_CLASS_CAPACITY, MODEL: ipv4/tcp
-        netif_t myif;
-        if (get_env_ipv4tcp(myif))
-        {
-            set_env_ipv4tcp(myif);
-            if (Settings.host_role == 0) // 0 = server, 1 = client
-            {
-                run_server_ipv4tcp();
-            }
-            else
-            {
-                run_client_ipv4tcp(); // bandwidth
-            };
-            return EXIT_SUCCESS;
-        }
-        break;
-#endif // TEST_IPV4TCP
-
-#ifdef TEST_IPV4UDP
-    case 2:                          // MODEL: ipv4/udp
-        if (Settings.host_role == 0) // 0 = server, 1 = client
-        {
-            run_ipv4udp_server(Settings.ipv4_port);
-        }
-        else
-        {
-            run_ipv4udp_client(&Settings, const char *server_ip, int server_port); // bandwidth
-        };
-        return EXIT_SUCCESS;
-        break;
-#endif // TEST_IPV4UDP
-
-#ifdef WITH_DAAS
-    case 7:                          // daas fresbee
-        if (Settings.host_role == 0) // 0 = server, 1 = client
-        {
-            run_server_ipv4tcp(Settings.ipv4_port);
-        }
-        else
-        {
-            run_client_ipv4tcp(&Settings, const char *server_ip, int server_port); // bandwidth
-        };
-        return EXIT_SUCCESS;
-        break;
-#endif // WITH_DAAS
-
-    case 8: // ipv4/icmp (ping)
-        // set enviroment
-        // run test tcp
-
-        break;
-
-    default:
-        // print out test not available !!!
-        break;
-    }
-
-    return EXIT_FAILURE;
+    return frun(0); // uses chosed model_protocol and role
 }
