@@ -85,8 +85,8 @@ void print_help()
     printf("  -V                                Enable messages for the looping server events\n");
 
     printf("\nRun mode");
-    printf("  -S <local_addr> <service>         Starts loopback server mode (if omitted uses default service/port)\n");
-    printf("  -s <remote_addr> <service>        Starts as client to test on loopback \n");
+    printf("  -S <local_addr>:<service>         Starts loopback server mode (if omitted uses default service/port)\n");
+    printf("  -s <remote_addr>:<service>        Starts as client to test on loopback \n");
     printf("  -i <local_interface/driver>       Forces to use a specific hardware interface (use -l to list availables)\n");
     printf("  -n <repetitions>                  Repeats testing\n");
     printf("  -t <period>                       Continuosly testing for time period [seconds] (max 8h)\n");
@@ -143,7 +143,7 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
 
         case 4: // --help
         case 'h':
-            print_usage(argv[0]);
+            print_usage();
             return rtExit;
             break;
 
@@ -280,7 +280,7 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
 // -------------------------------------------------------------------------------------------------------- !
 // Validation
 // -------------------------------------------------------------------------------------------------------- !
-ret_t validate_model_options(exe_t &_pfrun)
+ret_t validate_model_options(exefunc_t &_pfrun)
 {
 
     if (Options.model_protocol == _PROTO_NONE && Options.host_role == _ROLE_NONE) // Model and Protocol ok !
@@ -312,20 +312,30 @@ ret_t validate_model_options(exe_t &_pfrun)
     switch (Options.model_protocol)
     {
     case _PROTO_IPV4:
-
         set_env_ipv4tcp(Options);
-
         if (Options.host_role == _ROLE_SERVER)
         {
-            _pfrun = &run_server_ipv4tcp()((int)0);
+            _pfrun = &run_server_ipv4tcp; 
         }
         else // _ROLE_CLIENT
         {
-            run_client_ipv4tcp(); // bandwidth
+            _pfrun = &run_client_ipv4tcp; // bandwidth
         };
         break;
 
     case _PROTO_DAAS:
+
+        set_env_daasfrs(Options);
+        if (Options.host_role == _ROLE_SERVER)
+        {
+            _pfrun = &run_server_daasfrs(); 
+        }
+        else // _ROLE_CLIENT
+        {
+            _pfrun = &run_client_daasfrs(); // bandwidth
+        };
+        break;
+
         break;
     }
 

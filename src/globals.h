@@ -85,19 +85,17 @@ typedef enum
   rtErr = 2   // Generic error
 } ret_t;
 
-// typedef shared_ptr<arg_t> funcarg_t;
-typedef ret_t (*exe_t)(int sargs); // pointer to test routine
-
-// Defines evaluations keys for model
-//
-typedef enum : unsigned // Test Class
+typedef enum : unsigned // Evaluation classes
 {
   __unsetted = 0,
-  __Capacity, // Throughtput  = Traffic quantity/Transfer time, % = Throughtput / Bandwidth
-  __Capabilities,
-  __Availability,
-  __Security
+  __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
+  __Capabilities, // compliance with features matrix
+  __Availability, // service continuity in time windows
+  __Security      // security asserts test: data sniffing, peer shadow identity
 } tclass_t;
+
+// typedef shared_ptr<arg_t> funcarg_t;
+typedef ret_t (*exefunc_t)(tclass_t); // pointer to test routine
 
 typedef enum : unsigned // Supported Protocols
 {

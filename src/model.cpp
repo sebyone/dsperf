@@ -1,13 +1,13 @@
 #include "model.h"
 #include <cstdio>
 
-
+// ------------------------------------------------------------------------------------------------------------------------------!
 ret_t get_hwif_ipv4tcp(lnetif_t *ifs)
 {
-
     return rtOk;
 }
 
+// ------------------------------------------------------------------------------------------------------------------------------!
 void report_capacity(pmodel_info_t model_, capacity_vars_t &vars_, report_item_t switch_)
 {
     switch (switch_)

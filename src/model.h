@@ -37,9 +37,7 @@
 #define MODELS_H
 
 #pragma once
-
 #include "globals.h"
-
 #include <stdlib.h>
 #include <vector>
 
@@ -64,7 +62,6 @@ typedef enum
 // ------------------------------------------------------------------------
 // MODEL CLASS CAPACITY
 // ------------------------------------------------------------------------
-
 #define _CAPACITY_KEYS_COUNTER 13 // TODO: usare struct !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 enum capacity_keys                // Class Model Keys
 {
@@ -84,17 +81,14 @@ enum capacity_keys                // Class Model Keys
 };
 
 typedef double capacity_vars_t[_CAPACITY_KEYS_COUNTER];
-
 void report_capacity(pmodel_info_t model_, capacity_vars_t &vars_, report_item_t switch_);
 
 // ------------------------------------------------------------------------------------------------------------------------------!
-
 class ITestModel // Abstract test model_protocol
 {
 public:
     // Pure virtual constructor
     virtual ~ITestModel() {}; // force to invoke specialized destructor
-
     virtual unsigned listInterfaces(int &_iflist) = 0; // returns available local hardware for protocol
 
     // Configure
@@ -114,7 +108,6 @@ private:
 };
 
 typedef std::vector<netif_t> lnetif_t;
-
 ret_t get_hwif_ipv4tcp(lnetif_t *ifs); // Returns a list of availaible local interfaces ( )
 
 #endif // MODELS_H

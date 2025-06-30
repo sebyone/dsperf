@@ -54,9 +54,9 @@ ret_t get_hwif_ipv4tcp(netif_t &_nif); // returns interface information
 
 // ret_t set_env_ipv4tcp(netif_t &nif_); // updates interface parameters
 
-ret_t run_server_ipv4tcp(int arg); // start loopback server
+ret_t run_server_ipv4tcp(tclass_t tcls); // start loopback server
 
-ret_t run_client_ipv4tcp(int arg); // performs test
+ret_t run_client_ipv4tcp(tclass_t tcls); // performs test
 
 
 

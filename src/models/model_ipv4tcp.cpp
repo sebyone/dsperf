@@ -136,7 +136,7 @@ ret_t set_env_ipv4tcp(options_t &ops_)
 // -------------------------------------------------------------------------------------------------------- !
 // SERVER LOOPBACK
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_server_ipv4tcp(int arg)
+ret_t run_server_ipv4tcp(tclass_t tcls)
 {
     char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
     int server_sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -225,7 +225,7 @@ ret_t run_server_ipv4tcp(int arg)
 // -------------------------------------------------------------------------------------------------------- !
 // CLIENT
 // -------------------------------------------------------------------------------------------------------- !
-ret_t run_client_ipv4tcp(int arg)
+ret_t run_client_ipv4tcp(tclass_t tcls)
 {
     if (strlen(Options.local_addr) > 0) // (https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)
     {

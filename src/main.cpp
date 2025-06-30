@@ -46,11 +46,11 @@ int main(int argc, char *argv[])
     {
         return pcheck;
     }
-    exe_t frun = NULL;
+    exefunc_t frun = NULL;
     pcheck = validate_model_options(frun); // validate parsed options values
     if (pcheck != rtOk)
     {
         return pcheck;
     }
-    return frun(0); // uses chosed model_protocol and role
+    return frun(); // uses chosed model_protocol and role
 }

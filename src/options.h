@@ -35,6 +35,6 @@ void print_credits();
 
 ret_t parse_args(int argc, char *argv[]);
 
-ret_t validate_model_options(exe_t &_pfrun);
+ret_t validate_model_options(exefunc_t &_pfrun);
 
 #endif // OPTIONS_H
