@@ -14,12 +14,12 @@
 
 options_t Options; // global.h
 
-#define DSPERF_OPTIONS "S:s:b:n:c:m:f:t:y:v:V:h"
+#define DSPERF_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:V:h"
 
 static struct option long_options[] = { // "--" (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
     {"ipv4", no_argument, 0, 1},
     {"daas", required_argument, 0, 2},
-    {"v4udp", required_argument, 0, 3},
+    {"capacity", required_argument, 0, 3},
     {"help", no_argument, 0, 4},
     {0, 0, 0, 0}}; //
 
@@ -126,7 +126,7 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
     if (argc < 2)
     {
         print_credits();
-        print_usage(argv[0]);
+        print_usage();
         return rtExit;
     }
 
@@ -201,9 +201,9 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
 
         case 'b': // Traffic block size
             long bs = atol(optarg);
-            if (bs < 1)
+            if (bs < MIN_BLOCK_SIZE)
             {
-                pverbose("Error: blocksize must be > 0\n");
+                pverbose("Error: blocksize must be >0\n");
                 return rtErr;
             }
             else
@@ -212,9 +212,9 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
 
         case 'c': // Traffic pkts number
             long pn = atol(optarg);
-            if (pn < 1)
+            if (pn < MIN_PKT_NUMBER)
             {
-                pverbose("Error: packet number must be >= 1\n");
+                pverbose("Error: packet number must be >0\n");
                 return rtErr;
             }
             else
@@ -261,15 +261,19 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
             break;
 
         case 1: // --ipv4
-            Options.model_protocol == _PROTO_IPV4;
+            Options.model_protocol = _PROTO_IPV4;
             break;
 
         case 2: // --daas
-            Options.model_protocol == _PROTO_DAAS;
+            Options.model_protocol = _PROTO_DAAS;
+            break;
+
+        case 3: // --capacity
+            Options.model_class = __Capacity;
             break;
 
         default:
-            pverbose("error: unknow options '%s' !\n", c);
+            pverbose("error: unknow options '%c' !\n", c);
             print_help();
             return rtErr;
         }
@@ -293,16 +297,18 @@ ret_t validate_model_options(exefunc_t &_pfrun)
     if ((Options.block_size > 0 || (Options.pkts_num > 0 && Options.pkt_payload > 0))) // Model class "Capacity" ok !
     {
         if (Options.model_class == __unsetted)
-            Options.model_class == __Capacity; // defaul capacity
+        {
+            Options.model_class == __Capacity; // defaul class capacity
+        }
     }
-    else // check others classes
+    else // checks for other classes
     {
         pverbose("error: invalid parameters for test class !\n");
         print_help();
         return rtErr;
     }
 
-    if (Options.host_role == _ROLE_CLIENT && (strlen(Options.remote_addr) == 0)) // Server ok !
+    if (Options.host_role == _ROLE_CLIENT && (strlen(Options.remote_addr) == 0)) // Client ok !
     {
         pverbose("error: specify remote address !\n");
         print_help();
@@ -315,7 +321,7 @@ ret_t validate_model_options(exefunc_t &_pfrun)
         set_env_ipv4tcp(Options);
         if (Options.host_role == _ROLE_SERVER)
         {
-            _pfrun = &run_server_ipv4tcp; 
+            _pfrun = &run_server_ipv4tcp;
         }
         else // _ROLE_CLIENT
         {
@@ -325,19 +331,21 @@ ret_t validate_model_options(exefunc_t &_pfrun)
 
     case _PROTO_DAAS:
 
+#ifdef WITH_DAAS
         set_env_daasfrs(Options);
         if (Options.host_role == _ROLE_SERVER)
         {
-            _pfrun = &run_server_daasfrs(); 
+            _pfrun = &run_server_daasfrs();
         }
         else // _ROLE_CLIENT
         {
             _pfrun = &run_client_daasfrs(); // bandwidth
         };
         break;
-
-        break;
+#else
+        pverbose("error: libdaas not linked !\n");
+        return rtErr;
+#endif
     }
-
     return rtOk;
 }

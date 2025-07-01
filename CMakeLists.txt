@@ -26,15 +26,15 @@ file( GLOB_RECURSE CPPS "${SRC_DIR}/*.cpp" "${SRC_DIR}/*.c" )
 add_executable(${TARGET} ${CPPS} ${HPPS} )
 
 # Standard C/C++
-set(CMAKE_CXX_FLAGS "-I c:/msys64/usr/include") 
-set(CMAKE_C_FLAGS "-I c:/msys64/usr/include") 
+set(CMAKE_CXX_FLAGS "-I c:/msys64/ucrt64/include") 
+set(CMAKE_C_FLAGS "-I c:/msys64/ucrt64/include") 
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-#set(CMAKE_RUNTIME_OUTPUT_DIRECTORY bin)
 
 target_compile_options( ${TARGET} PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wunused-parameter -Wno-long-long -pedantic )
-target_compile_features( ${TARGET} PRIVATE cxx_std_14 )
+target_compile_features( ${TARGET} PRIVATE cxx_std_17 )
 
 if(WIN32)
   message(STATUS "Compilo su Windows")

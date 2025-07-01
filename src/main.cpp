@@ -35,7 +35,6 @@
 
 #include "version.h"
 #include "globals.h"
-
 #include "options.h"
 
 int main(int argc, char *argv[])

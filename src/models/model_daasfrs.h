@@ -48,13 +48,18 @@
 
 #include "../locals.h"
 
-ret_t get_daasfrs_info(); // return test model_protocol information (string)
+#include "../helpers/utils.h"
+#include "../model.h"
 
-ret_t check_daasfrs();
+ret_t set_env_daasfrs(options_t &ops_);  // set default Options values for model
 
-ret_t run_daasfrs_client(daas_setup_t *setup, options_t *test);
+// ret_t get_hwif_ipv4tcp(netif_t &_nif); // returns interface information
 
-ret_t run_daasfrs_server(daas_setup_t *setup);
+// ret_t set_env_ipv4tcp(netif_t &nif_); // updates interface paraeters
+
+ret_t run_server_daasfrs(tclass_t tcls); // start loopback server
+
+ret_t run_client_daasfrs(tclass_t tcls); // performs test
 
 #endif // WITH_DAAS
 #endif // MODEL_DAASFRS_H

@@ -55,6 +55,7 @@ IEEE 802.21     MIH (Media Independent Handoff) / DaaS
 #pragma once
 
 #include "helpers/utils.h"
+#include <stdbool.h>
 // Setting --------------------------------------------------
 
 #undef WITH_DAAS
@@ -85,7 +86,7 @@ typedef enum
   rtErr = 2   // Generic error
 } ret_t;
 
-typedef enum : unsigned // Evaluation classes
+typedef enum // Evaluation classes
 {
   __unsetted = 0,
   __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
@@ -95,9 +96,9 @@ typedef enum : unsigned // Evaluation classes
 } tclass_t;
 
 // typedef shared_ptr<arg_t> funcarg_t;
-typedef ret_t (*exefunc_t)(tclass_t); // pointer to test routine
+typedef ret_t (*exefunc_t)(void); // pointer to test routine
 
-typedef enum : unsigned // Supported Protocols
+typedef enum // Supported Protocols
 {
   _PROTO_NONE = 0, // Undefined
   _PROTO_DAAS,     // DaaS/Meshin Stack (Overlay)
@@ -106,46 +107,13 @@ typedef enum : unsigned // Supported Protocols
   _PROTO_BTHX      // Bluetooth LLC/MAC
 } nproto_t;
 
-typedef enum : unsigned // Roles
+typedef enum // Roles
 {
   _ROLE_NONE = 0, // Undefined
   _ROLE_CLIENT,
   _ROLE_SERVER
 } hrole_t;
 
-#define _OPT_STR_LEN 256
-typedef struct
-{
-  nproto_t model_protocol;  // 0 = unset, _PROTO_DAAS,  _PROTO_IPV4, ...
-  tclass_t model_class;     // Cpacity
-  hrole_t host_role;        // 0 = unset, _ROLE_CLIENT, _ROLE_SERVER, ...
-                            //
-  int repetitions;          // repeats test, default 1
-                            //
-                            //  __Capacity:
-                            //
-  unsigned long block_size; // generate traffic by block size  (needs to be supported in testing routine)
-  unsigned long pkts_num;   // generate traffic by number of pkts (needs to be supported in testing routine)
-                            //
-  double testing_time;      // perform testing for a fixed time period, in seconds
-                            //
-  int pkt_payload;          // pkt's payload size (needs to be supported in testing routine)
-  // bool mss_specified;             // ???
-  //  ______Time based Test
-  // bool time_defined;              //
-  //
-  // ______Print out options
-  bool csv_enabled;               // output will be formatted
-  char csv_path[_OPT_STR_LEN];    // output will be saved
-  bool csv_format;                // ?
-  bool csv_no_header;             // ?
-                                  //
-  long unsigned service_num;      // Protocol Loopback Service Port
-  char local_addr[_OPT_STR_LEN];  // Protocol Local-IF/Addr
-  char remote_addr[_OPT_STR_LEN]; // Protocol Remote Addr (URI Loopback Service)
-                                  // char model_path[_OPT_STR_LEN];  // path to configutation file (libdaas.ini)
-
-} options_t;
 
 // Data Structures for local hardware resources
 //
