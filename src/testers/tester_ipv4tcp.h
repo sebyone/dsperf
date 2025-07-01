@@ -1,7 +1,7 @@
 /*
  * dsperf 2024, 2025 (@) Sebyone Srl
  *
- * File: model_ipv4tcp.h
+ * File: tester_ipv4tcp.h
  *
  * Licence
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
@@ -16,42 +16,40 @@
  * plogiacco@smartlab.it - initial design, implementation and documentation
  * sebastiano.meduri@gmail.com  - initial design, implementation and documentation
  *
- *
- * ToDo:
- * - windows porting
- * - check um and throughput calc
- * - compute bandwidth and throughput % as: throughput / bandwidth * 100
- * - model_protocol multi-threading ( socket shared )
- * - model_protocol testing_time-windowed
- *
  */
 
-// Sends a block of data to remote server and print out all test results (test_outs)
-//
-// Sub Protocol as defined in RFCs 790-791
-// 6-TCP	Transmission Control Protocol
+ 
+/* dsperf tester routine
+   ------------------------------------------
+          title: "IPv4/TCP"
+          specs: "Throughput/Bandwidth v.01a"
+         author: "developers@sebyone.it"
+       protocol: _PROTO_IPV4,
+          model: __Capacity
+        variant: 0
 
-// Numero di protocollo	Nome del protocollo	Abbreviazione
-// ----+---------------------------------------+----------
-// 1	Internet Control Message Protocol	    ICMP
-// 2	Internet Group Management Protocol	    IGMP
-// 6	Transmission Control Protocol	        TCP
-// 17	User Datagram Protocol	                UDP
-// 41	IPv6 encapsulation	                    ENCAP
-// 89	Open Shortest Path First	            OSPF
-// 132	Stream Control Transmission Protocol	SCTP
+    Overview
+    Trasmission Capacity Tester routine for Transmission Control Protocol (6-TCP)
+    Sends a block of data to remote server and print out all test results.
+
+    Protocol and subs as defined in IETF RFCs 790-791
+    ----+---------------------------------------+----------
+    1	Internet Control Message Protocol	    ICMP
+    2	Internet Group Management Protocol	    IGMP
+    6	Transmission Control Protocol	        TCP
+    17	User Datagram Protocol	                UDP
+    41	IPv6 encapsulation	                    ENCAP
+    89	Open Shortest Path First	            OSPF
+    132	Stream Control Transmission Protocol	SCTP
+*/
 
 #ifndef MODEL_IPV4TCP_H
 #define MODEL_IPV4TCP_H
 
-#include "../helpers/utils.h"
-#include "../model.h"
+#include "../models/capacity.h"
+#include "../options.h"
 
 ret_t set_env_ipv4tcp(options_t &ops_); // set default Options values for model
-
-// ret_t get_hwif_ipv4tcp(netif_t &_nif); // returns interface information
-
-// ret_t set_env_ipv4tcp(netif_t &nif_); // updates interface parameters
 
 ret_t run_server_ipv4tcp(); // start loopback server
 

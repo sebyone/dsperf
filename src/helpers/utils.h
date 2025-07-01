@@ -21,12 +21,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 //
-#define _1KB 2^10
-#define _1MB 2^20
-#define _1GB 2^30
-#define _Byte2Megabyte(b) ((double)(b) / (2^20))
-#define _Byte2Megabits(b) ((double)(b * 8) / (double)(2^20))
-#define _MegaByte2Megabits(b) ((long )(b *8 ))
+#define _1KB 2 ^ 10
+#define _1MB 2 ^ 20
+#define _1GB 2 ^ 30
+#define _Byte2Megabyte(b) ((double)(b) / (2 ^ 20))
+#define _Byte2Megabits(b) ((double)(b * 8) / (double)(2 ^ 20))
+#define _MegaByte2Megabits(b) ((long)(b * 8))
 
 // Bitwise
 //
@@ -40,5 +40,28 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 #define pinToggle(pin) PINB ^= 1UL _BV()
+
+#define noexec void(0)
+
+#ifdef VERBOSE
+#include <stdio.h>
+#define pverbose printf
+#else
+#define pverbose noexec
+#endif
+
+#ifdef DEBUG
+#include <stdio.h>
+#define pdebug printf
+#else
+#define pdebug noexec
+#endif
+
+typedef enum
+{
+    rtOk = 0,   // No error
+    rtExit = 1, // stdlib EXIT_FAILURE 1
+    rtErr = 2   // Generic error
+} ret_t;
 
 #endif // UTILS_H

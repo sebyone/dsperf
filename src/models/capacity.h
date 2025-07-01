@@ -1,7 +1,7 @@
 /*
  * DaaS-IoT 2019, 2025 (@) Sebyone Srl
  *
- * File: loopback.c
+ * File: model.h
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
@@ -33,24 +33,52 @@
  *
  */
 
-#include "version.h"
-#include "globals.h"
-#include "options.h"
-#include "validator.h"
+#ifndef MODEL_CAPACITY_H
+#define MODEL_CAPACITY_H
 
-int main(int argc, char *argv[])
+#pragma once
+#include <stdlib.h>
+#include <vector>
+
+#include "../models.h"
+
+// ------------------------------------------------------------------------
+// MODEL VARS CAPACITY
+// ------------------------------------------------------------------------
+
+typedef struct // Model vars Capacity test
 {
-    print_credits();
-    ret_t pcheck = parse_args(argc, argv); // parsing arguments
-    if (pcheck != rtOk)
-    {
-        return pcheck;
-    }
-    exefunc_t frun = NULL;
-    pcheck = validate_model_options(frun); // validate parsed options values
-    if (pcheck != rtOk)
-    {
-        return pcheck;
-    }
-    return frun(); // uses chosed model_protocol and role
-}
+    int tstcounter;       //  1. Executions counter
+                          //
+    double blocksize;     //  2. Traffic data size [MB] ( datatosend )
+    double timeslot;      //  1. Traffic in time slot [s]
+                          //
+    double pktstosend;    //  7. Pkts to send
+                          //
+    double pktheader;     //  5. Header [bytes]
+    double pktpayload;    //  4. Payload size [bytes]
+    double pktefficiency; //  6. Protocol Efficiency [%]   - ratio: [%] = payload / packet_size ( header+payload )
+                          //
+    double datasent;      // 10. Traffic data sent [MB]
+    double dataloss;      //  9. Traffic loss  = pktssent - pktstosend
+                          //
+    double pktssent;      //  8. Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
+    double pktsloss;      //  9. Pkt loss  = pktssent - pktstosend     - ???????????????????????
+                          //
+    double setuptime;     // 12. Total links management time  [ms]
+    double totaltime;     // 12. Total elapsed test time [ms]
+                          //
+    double bandwidth;     // set reference to nominal speed [Mbps]
+    double jitter;        // 11. Pkt Err.[%]
+                          //
+    double throughput;    // 13. Throughput [Mbps]
+                          //
+    double tsterrors;     // 11.
+                          //
+} capacity_vars_t;
+
+// ------------------------------------------------------------------------------------------------------------------------------!
+ret_t resetVars(capacity_vars_t &_cvars);
+ret_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_);
+
+#endif // MODEL_CAPACITY_H

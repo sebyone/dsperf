@@ -2,19 +2,16 @@
 #include "options.h"
 #include <ctype.h>
 #include <stdlib.h>
-#include <string.h>
+// #include <string.h>
 #include <stdio.h>
 #include <getopt.h>
 
 #include "version.h"
-
-#include "models/model_ipv4tcp.h"
-#include "models/model_daasfrs.h"
 //
 
 options_t Options; // global.h
 
-#define DSPERF_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:V:h"
+#define DSPERF_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:V:h:w:g"
 
 static struct option long_options[] = { // "--" (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
     {"ipv4", no_argument, 0, 1},
@@ -24,7 +21,7 @@ static struct option long_options[] = { // "--" (https://www.gnu.org/software/li
     {0, 0, 0, 0}}; //
 
 // -------------------------------------------------------------------------------------------------------- !
-void clearOptions()
+void clearGlobalOptions()
 {
     memset(&Options, 0, sizeof(options_t));
 
@@ -33,13 +30,16 @@ void clearOptions()
     Options.model_class = __unsetted;     // Test class (Features, Capacity, etc.etc.)
 
     // Run mode
-    Options.host_role = _ROLE_NONE; // client or loopback server
-    Options.repetitions = 1;        // repetitions counter
+    Options.run_mode = _ROLE_NONE; // client or loopback server
+    Options.tst_repeats = 1;       // repetitions counter
+    Options.tst_time_slot = 0;     // Test for a time period
+    Options.tst_block_size = 0;    // Traffic by block-size
+    Options.tst_pkts_num = 0;      // Testing for a lot of packet
+    Options.multilink = 0;         // enable to use concurrent connections
 
     // Class: Caqpacity
-    Options.block_size = 0;  // Traffic by block-size
-    Options.pkts_num = 0;    // Traffic by packet number
     Options.pkt_payload = 0; // Packet payload size
+    Options.bandwidth = 0;   // set reference to nominal speed [Mbps]
 
     // Formatting
     Options.csv_enabled = false;   // print out in csv format
@@ -68,9 +68,9 @@ void print_usage() // const char *prog_name
     const char *prog_name = "dsperf";
     printf("Usage:\n");
     printf("\n");
-    printf("  Loopback server: %s -S <local_ip:port> --ipv4|--daas -V\n", prog_name);
+    printf("  server Loopback: %s -S <local_ip:port> --ipv4 |--daas -V\n", prog_name);
     printf("\n");
-    printf("  Tester client: %s -s <server_ip:port> [-b <blocksize> | -p <packet-size> -c <count> ] -n <repetitions>  [ --ipv4 | --daas ]  \n", prog_name);
+    printf("  client Tester:  %s -s <server_ip:port> [-b <blocksize> | -p <packet-size> -c <count> ] -n <repetitions>  [ --ipv4 | --daas ]  \n", prog_name);
     printf("\n");
 }
 
@@ -81,15 +81,17 @@ void print_help()
     printf("  -v                                Show dsperf details and exit\n");
     printf("  -h, --help                        Show usage informations\n");
     printf("  -l                                Lists local interface (require protocol specifications)\n");
-    printf("  -x                                Disable all system's messages\n");
-    printf("  -V                                Enable messages for the looping server events\n");
+    printf("  -g                                Disable all system's messages\n");
+    printf("  -w                                Sets reference to nominal speed [Mbps] (bandwidth)\n");
+    printf("  -x                                Enable to use concurrent connections \n");
 
     printf("\nRun mode");
     printf("  -S <local_addr>:<service>         Starts loopback server mode (if omitted uses default service/port)\n");
     printf("  -s <remote_addr>:<service>        Starts as client to test on loopback \n");
     printf("  -i <local_interface/driver>       Forces to use a specific hardware interface (use -l to list availables)\n");
-    printf("  -n <repetitions>                  Repeats testing\n");
-    printf("  -t <period>                       Continuosly testing for time period [seconds] (max 8h)\n");
+    printf("  -n <repetitions>                  Repeats test\n");
+    printf("  -t <period>                       Continuosly testing for time period in [seconds] (max 8h)\n");
+    printf("  -V                                Enable messages for the looping server events\n");
 
     printf("\nTraffic generator\n");
     printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
@@ -121,7 +123,9 @@ void print_help()
 ret_t parse_args(int argc, char *argv[]) // Syntax validations
 {
     int option_index = 0;
-    int c;
+    int option;
+    size_t tmpsize;
+    long tmplong;
 
     if (argc < 2)
     {
@@ -130,11 +134,12 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
         return rtExit;
     }
 
-    clearOptions(); // Options
+    clearGlobalOptions(); // Options
 
-    while ((c = getopt_long(argc, argv, DSPERF_OPTIONS, long_options, &option_index)) != -1)
+    while ((option = getopt_long(argc, argv, DSPERF_OPTIONS, long_options, &option_index)) != -1)
     {
-        switch (c)
+
+        switch (option)
         {
         case 'v': //  how dsperf details and exit
             print_credits();
@@ -148,88 +153,105 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
             break;
 
         case 'l': // Show local interfaces for protocol
-        case 'x': // Disable all system's messages
-        case 'V': // Enable messages for the looping server events
-            pverbose(" '%s' unsupported options ! \n", c);
+        case 'g': // Disable all system's messages
+        case 'V': // Enables messages for the looping server events
+            pverbose("parser:  unsupported options '%s' ! \n", option);
             return rtErr;
+            break;
+
+        case 'x': // Enables concurrent connections
+            Options.multilink = atoi(optarg);
+            if (Options.multilink < 1)
+            {
+                pverbose("parser: multi-link not allowed \n");
+                return rtErr;
+            }
+            break;
+        case 'w': // set reference to nominal speed [Mbps]
+            Options.bandwidth = atol(optarg);
+            if (Options.bandwidth < 1)
+            {
+                pverbose("parser: repetitions must be >= 1\n");
+                return rtErr;
+            }
             break;
 
         case 'S':
         case 's':
-            if (Options.host_role != _ROLE_NONE) // Role already setted
+            if (Options.run_mode != _ROLE_NONE) // Role already setted
             {
-                pverbose("error: can't specify both -S and -s !\n");
+                pverbose("parser: can't specify both -S and -s !\n");
                 return rtErr;
             }
-            size_t salen = strlen(optarg); // <addr_remote>
-            if (c == 's')                  // _ROLE_CLIENT
+            tmpsize = strlen(optarg); // <addr_remote>
+            if (option == 's')        // _ROLE_CLIENT
             {
-                Options.host_role = _ROLE_CLIENT;
-                if (salen > 0 && salen >= _OPT_STR_LEN)
+                Options.run_mode = _ROLE_CLIENT;
+                if (tmpsize > 0 && tmpsize >= _MAX_STR_LEN)
                 {
-                    pverbose("error: invalid <addr_remote> parameter ! \n");
+                    pverbose("parser: invalid <addr_remote> parameter ! \n");
                     return rtErr;
                 }
-                strncpy(Options.remote_addr, optarg, salen);
+                strncpy(Options.remote_addr, optarg, tmpsize);
             }
-            if (c == 'S') // _ROLE_SERVER
+            if (option == 'S') // _ROLE_SERVER
             {
-                Options.host_role = _ROLE_SERVER;
+                Options.run_mode = _ROLE_SERVER;
 
-                if (salen > 0 && salen >= _OPT_STR_LEN)
+                if (tmpsize > 0 && tmpsize >= _MAX_STR_LEN)
                 {
-                    pverbose("error: invalid <addr_local> parameter ! \n");
+                    pverbose("parser: invalid <addr_local> parameter ! \n");
                     return rtErr;
                 }
-                strncpy(Options.local_addr, optarg, salen);
+                strncpy(Options.local_addr, optarg, tmpsize);
             }
             break;
 
         case 'i': // Forces to use a specific hardware interface
-            pverbose(" '%s' unsupported options ! \n", c);
+            pverbose(" '%s' unsupported options ! \n", option);
             return rtErr;
             break;
 
         case 'n': // Repetitions
-            Options.repetitions = atoi(optarg);
-            if (Options.repetitions < 1)
+            Options.tst_repeats = atoi(optarg);
+            if (Options.tst_repeats < 1)
             {
-                pverbose("Error: repetitions must be >= 1\n");
+                pverbose("parser: repetitions must be >= 1\n");
                 return rtErr;
             }
             break;
 
         case 'b': // Traffic block size
-            long bs = atol(optarg);
-            if (bs < MIN_BLOCK_SIZE)
+            tmplong = atol(optarg);
+            if (tmplong < MIN_BLOCK_SIZE)
             {
-                pverbose("Error: blocksize must be >0\n");
+                pverbose("parser: blocksize must be >0\n");
                 return rtErr;
             }
             else
-                Options.block_size = bs;
+                Options.tst_block_size = tmplong;
             break;
 
         case 'c': // Traffic pkts number
-            long pn = atol(optarg);
-            if (pn < MIN_PKT_NUMBER)
+            tmplong = atol(optarg);
+            if (tmplong < MIN_PKT_NUMBER)
             {
-                pverbose("Error: packet number must be >0\n");
+                pverbose("parser: packet number must be >0\n");
                 return rtErr;
             }
             else
-                Options.pkts_num = pn;
+                Options.tst_pkts_num = (double)tmplong;
             break;
 
         case 'p': // Packet's payload size in bytes
-            long pp = atol(optarg);
-            if (pp < 1)
+            tmplong = atol(optarg);
+            if (tmplong < 1)
             {
-                pverbose("error: packet's payload size must be > 0\n");
+                pverbose("parser: packet's payload size must be > 0\n");
                 return rtErr;
             }
             else
-                Options.pkt_payload = pp;
+                Options.pkt_payload = tmplong;
             break;
 
         case 'f':
@@ -238,12 +260,12 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
             break;
 
         case 't':
-            unsigned tt = atoi(optarg);
-            if (tt > 1 && tt << 8 * 3600)
-                Options.testing_time = tt;
+            tmplong = atol(optarg);
+            if (tmplong > 1 && tmplong << 8 * 3600)
+                Options.tst_time_slot = (double)tmplong;
             else
             {
-                pverbose("error: testing time period not valid '-t %s' ! \n", optarg);
+                pverbose("parser: testing time period not valid '-t %s' ! \n", optarg);
                 return rtErr;
             }
             break;
@@ -253,7 +275,7 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
             Options.csv_no_header = false;
             if (strlen(optarg) > 1)
             {
-                pverbose("error: formatting options '-y %s' unknown ! \n", optarg);
+                pverbose("parser: formatting options '-y %s' unknown ! \n", optarg);
                 return rtErr;
             }
             else
@@ -273,79 +295,10 @@ ret_t parse_args(int argc, char *argv[]) // Syntax validations
             break;
 
         default:
-            pverbose("error: unknow options '%c' !\n", c);
+            pverbose("parser: unknow options '%c' !\n", option);
             print_help();
             return rtErr;
         }
-    }
-    return rtOk;
-}
-
-// -------------------------------------------------------------------------------------------------------- !
-// Validation
-// -------------------------------------------------------------------------------------------------------- !
-ret_t validate_model_options(exefunc_t &_pfrun)
-{
-
-    if (Options.model_protocol == _PROTO_NONE && Options.host_role == _ROLE_NONE) // Model and Protocol ok !
-    {
-        pverbose("error: specify protocol and run mode !\n");
-        print_usage();
-        return rtErr;
-    }
-
-    if ((Options.block_size > 0 || (Options.pkts_num > 0 && Options.pkt_payload > 0))) // Model class "Capacity" ok !
-    {
-        if (Options.model_class == __unsetted)
-        {
-            Options.model_class == __Capacity; // defaul class capacity
-        }
-    }
-    else // checks for other classes
-    {
-        pverbose("error: invalid parameters for test class !\n");
-        print_help();
-        return rtErr;
-    }
-
-    if (Options.host_role == _ROLE_CLIENT && (strlen(Options.remote_addr) == 0)) // Client ok !
-    {
-        pverbose("error: specify remote address !\n");
-        print_help();
-        return rtErr;
-    }
-
-    switch (Options.model_protocol)
-    {
-    case _PROTO_IPV4:
-        set_env_ipv4tcp(Options);
-        if (Options.host_role == _ROLE_SERVER)
-        {
-            _pfrun = &run_server_ipv4tcp;
-        }
-        else // _ROLE_CLIENT
-        {
-            _pfrun = &run_client_ipv4tcp; // bandwidth
-        };
-        break;
-
-    case _PROTO_DAAS:
-
-#ifdef WITH_DAAS
-        set_env_daasfrs(Options);
-        if (Options.host_role == _ROLE_SERVER)
-        {
-            _pfrun = &run_server_daasfrs();
-        }
-        else // _ROLE_CLIENT
-        {
-            _pfrun = &run_client_daasfrs(); // bandwidth
-        };
-        break;
-#else
-        pverbose("error: libdaas not linked !\n");
-        return rtErr;
-#endif
     }
     return rtOk;
 }

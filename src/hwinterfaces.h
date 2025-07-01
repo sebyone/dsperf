@@ -29,36 +29,38 @@
 
 typedef struct
 {
-    int number;
-    /*
-  $ ethtool eth0
-    Options for eth0:
-    Supported ports: [ FIBRE ]
-    Supported link modes:   25000baseCR/Full, 50000baseCR2/Full
-    Supported pause frame use: Symmetric Receive-only
-    Supports auto-negotiation: Yes
-    Supported FEC modes: RS	 BASER	 LLRS
-    Advertised link modes:  25000baseCR/Full
-                            50000baseCR2/Full
-    Advertised pause frame use: Symmetric
-    Advertised auto-negotiation: Yes
-    Advertised FEC modes: Not reported
-    Link partner advertised link modes:  Not reported
-    Link partner advertised pause frame use: Symmetric
-    Link partner advertised auto-negotiation: No
-    Link partner advertised FEC modes: Not reported
-    Speed: 50000Mb/s
-    Lanes: 2
-    Duplex: Full
-    Auto-negotiation: on
-    Port: FIBRE
-    PHYAD: 0
-    Transceiver: internal
-    netlink error: Operation not permitted
-    Current message level: 0x00002081 (8321)
-                           drv tx_err hw
-    Link detected: yes
-    */
+  int number;
+  /*
+$ ethtool eth0
+  Options for eth0:
+  Supported ports: [ FIBRE ]
+  Supported link modes:   25000baseCR/Full, 50000baseCR2/Full
+  Supported pause frame use: Symmetric Receive-only
+  Supports auto-negotiation: Yes
+  Supported FEC modes: RS	 BASER	 LLRS
+  Advertised link modes:  25000baseCR/Full
+                          50000baseCR2/Full
+  Advertised pause frame use: Symmetric
+  Advertised auto-negotiation: Yes
+  Advertised FEC modes: Not reported
+  Link partner advertised link modes:  Not reported
+  Link partner advertised pause frame use: Symmetric
+  Link partner advertised auto-negotiation: No
+  Link partner advertised FEC modes: Not reported
+  Speed: 50000Mb/s
+  Lanes: 2
+  Duplex: Full
+  Auto-negotiation: on
+  Port: FIBRE
+  PHYAD: 0
+  Transceiver: internal
+  netlink error: Operation not permitted
+  Current message level: 0x00002081 (8321)
+                         drv tx_err hw
+  Link detected: yes
+  */
 } hwif_t, *phwif_t;
+
+ret_t ipv4tcp_bandwidth(int ifn, long dband);
 
 #endif // HARDWARE_H

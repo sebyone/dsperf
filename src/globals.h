@@ -18,85 +18,20 @@
  *
  */
 
-/* ------------------------------------------------------------------------------------------------------------------------------
 
-      ISO-OSI                         IEEE 802.x (--ipv4)                       DaaS/Meshin (--daas)
-+-----------------------+   +---------------------------------------+   +--------------------------------------+
-| 7.Application layer   |   |                                       |   |  Service Layer  (OS-SDK)             |    Overlay
-+-----------------------+   |                                       |   +--------------------------------------+
-| 6.Presentation layer  |   |                                       |   |  Interface Layer   (API)             |
-+-----------------------+   |                                       |   +--------------------------------------+
-| 5.Session layer       |   |                                       |   |  Control Layer   (AGENT)             |
-+-----------------------+   |                                       |   +--------------------------------------+
-| 4.Transport layer     |   |                                       |   |  Mapping Layer    (CORE)             |
-+-----------------------+   |                                       |   +--------------------------------------+
-| 3.Network layer       |   | Upper layer protocols                 |   |  Channel layer (Drivers)             |
-+-----------------------+   +---------------------------------------+   +--------------------------------------+    -----
-| 2.Data link layer     |   | Logical link control (LLC)            |   |  lower layer protocols               |    Underlay
-+-----------------------+   | Medium access control (MAC)           |   |                                      |
-| 1.Physical layer      |   |                                       |   |                                      |
-+-----------------------+   +---------------------------------------+   +--------------------------------------+
 
-IEEE 802.1	    LAN Protocols Working Group
-IEEE 802.3	    Ethernet specifications
-IEEE 802.11	    WLAN (Wireless LAN) Wi-Fi certification & Mesh
-IEEE 802.15.3   UWB (ultra wideband, wide band and ultraband), low energy level radio technology for short-range.
-IEEE 802.15.4   PAN (personal area network) Low-Rate wireless e.g., Zigbee, WirelessHART, MiWi, etc.
-IEEE 802.15.6   BAN (body area network),
-               WBAN (wireless body area network),
-               BSN (body sensor network),
-               MBAN (medical body area network)
-IEEE 802.21     MIH (Media Independent Handoff) / DaaS
------------------------------------------------------------------------------------------------------------------------------- */
-
-#ifndef LOCALS_H
-#define LOCALS_H
+#ifndef GLOBALS_H
+#define GLOBALS_H
 
 #pragma once
 
-#include "helpers/utils.h"
-#include <stdbool.h>
-// Setting --------------------------------------------------
-
-#undef WITH_DAAS
-
+// Config
+#undef LIBDAAS_V19
 #undef DEBUG
 #define VERBOSE
 
-// ---------------------------------------------- END SETTINGS
-
-#define noexec void(0)
-
-#ifdef VERBOSE
-#define pverbose printf
-#else
-#define pverbose noexec
-#endif
-
-#ifdef DEBUG
-#define pdebug printf
-#else
-#define pdebug noexec
-#endif
-
-typedef enum
-{
-  rtOk = 0,   // No error
-  rtExit = 1, // stdlib EXIT_FAILURE 1
-  rtErr = 2   // Generic error
-} ret_t;
-
-typedef enum // Evaluation classes
-{
-  __unsetted = 0,
-  __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
-  __Capabilities, // compliance with features matrix
-  __Availability, // service continuity in time windows
-  __Security      // security asserts test: data sniffing, peer shadow identity
-} tclass_t;
-
-// typedef shared_ptr<arg_t> funcarg_t;
-typedef ret_t (*exefunc_t)(void); // pointer to test routine
+#include "helpers/utils.h"
+#include <stdbool.h>
 
 typedef enum // Supported Protocols
 {
@@ -114,10 +49,13 @@ typedef enum // Roles
   _ROLE_SERVER
 } hrole_t;
 
+typedef ret_t (*exefunc_t)(void); // pointer to tester routine
 
-// Data Structures for local hardware resources
+#define _MAX_STR_LEN 256
+
+// Data Structures for networking local hardware resources
 //
-typedef struct // local interfaces
+typedef struct // interfaces
 {
   char *ifname;     // name as OS reported "eth", "wlan", ...
   double bandwidth; // nominal Speed: 50000Mb/s
@@ -153,22 +91,4 @@ $ ethtool eth0
   */
 } netif_t;
 
-/*
-#if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
-#include <unistd.h>
-#include <getopt.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <arpa/inet.h>
-#include <sys/testing_time.h>
-#include <testing_time.h>
-#endif
-
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-*/
-
-#endif // LOCALS_H
+#endif // GLOBALS_H

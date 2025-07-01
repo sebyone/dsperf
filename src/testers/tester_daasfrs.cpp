@@ -1,5 +1,5 @@
 
-#include "model_daasfrs.h"
+#include "tester_daasfrs.h"
 
 #ifdef WITH_DAAS
 daas_setup_t daas_setup;

@@ -27,7 +27,7 @@
 
 #ifndef MODEL_DAASFRS_H
 #define MODEL_DAASFRS_H
-#ifdef WITH_DAAS
+#ifdef  LIBDAAS_V19
 
 #define TEST_DAASFRS 2                   // DaaS Fresbee loopback
 #define TEST_DAASFRS_CLASS TEST_CAPACITY // Capabilities, Availability, Capacity, Security
