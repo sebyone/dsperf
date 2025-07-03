@@ -10,6 +10,7 @@
 #include <netinet/in.h>  // Definitions for the internet protocol family
 #include <netinet/tcp.h> // defines macros for use as a socket option
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #elif defined(__windows__)
 
@@ -38,12 +39,12 @@ const model_info_t info = {       // TESTER:
 // -------------------------------------------------------------------------------------------------------- !
 static struct // Specific ipv4 parameters
 {
-    unsigned repeat_n;    // test repetittion
-    in_port_t port;       // IPv4 Port
-    sockaddr_in local_ip; // Local hwif/IP
-    unsigned local_if;
-    sockaddr remote_ip; // Client mode only
-    unsigned mss;       // mss size
+    int repeat_n;      // test repetittion
+    short int port;    // IPv4 Port
+    sockaddr_in local; // Server mode local hwif/IP
+    int local_hwif;    // local Interface !!!!!!!!!!!!!!!!!!
+    sockaddr remote;   // Client mode only
+    unsigned mss;      // mss size
     double bandwidth;
     //
 } env; // env_settings_ipv4_t;
@@ -58,114 +59,87 @@ void setDefaultEnv()
     memset(&env, 0, sizeof(env));
 
     // env.mode = _ROLE_NONE;                     // run mode
-    env.repeat_n = 0;                          // run counter
-    env.port = IPV4_DEF_SPORT;                 // default service port
-    env.local_if = NULL;                       // uses specified interface
-    env.local_ip.sin_family = AF_INET;         // Posix IP struct
-    env.local_ip.sin_addr.s_addr = INADDR_ANY; // Set all locals
-    env.local_ip.sin_port = htons(env.port);   // default port setted
-    env.remote_ip.sa_family = AF_INET;         // Posix IP struct
-    env.mss = 0;                               // =0 negotiate >0 fixed
-    env.bandwidth = 0;                         // nominal Speed: 50000Mb/s
+    env.repeat_n = 0;                       // run counter
+    env.port = IPV4_DEF_SPORT;              // default service port
+    env.local_hwif = 0;                     // uses specified hardware
+    env.local.sin_family = AF_INET;         // IP family
+    env.local.sin_addr.s_addr = INADDR_ANY; // Set all locals
+    env.local.sin_port = htons(env.port);   // default port setted
+    env.remote.sa_family = AF_INET;         // IP family
+    env.mss = 0;                            // =0 negotiate >0 fixed
+    env.bandwidth = 0;                      // nominal Speed: 50000Mb/s
     env.mss = 0;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-rt_t set_env_ipv4tcp(options_t &ops_)
+rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 {
-    // Reset Tester vars and Enviroment
-    resetVars(vars);
+    resetVars(vars); // Reset Tester vars and Enviroment
     setDefaultEnv();
 
-    // Set Tester Parameter
-    if (ops_.service_num > 0) // Check and Set IPv4 port number
+    if (ops_.service_num > 0) // Check range and Set IPv4 port number
     {
-        env.port = ops_.service_num;
-        if ((env.port < IPV4_MIN_SPORT || env.port > IPV4_MAX_SPORT))
+        if ((ops_.service_num < IPV4_MIN_SPORT) || (ops_.service_num > IPV4_MAX_SPORT))
         {
-            pverbose("ipv4tcp: invalid port number: '%d' !\n", env.port);
+            pverbose("ipv4tcp: invalid port number: '%d' !\n", ops_.service_num);
             return rtErr;
         }
-        env.local_ip.sin_port = htons(env.port);
+        env.port = ops_.service_num;
+        env.local.sin_port = htons(env.port);
+    }
+    else // set default
+    {
+        pverbose("ipv4tcp: uses default service port: '%d' !\n", env.port);
     }
 
-    vars.blocksize = ops_.tst_block_size; // block-size mode
-    vars.timeslot = ops_.tst_time_slot;   // timed mode
-    vars.bandwidth = ops_.bandwidth;      // Reference to bandwidth
+    vars.blocksize = (double)ops_.tst_block_size; // block-size mode
+    vars.timeslot = (double)ops_.tst_time_slot;   // timed mode
+    vars.bandwidth = (double)ops_.bandwidth;      // Reference to bandwidth !!!!!!!
+
+    in_addr_t ip_addr = 0;
 
     if (ops_.run_mode == _ROLE_SERVER)
     {
 
-        // int getaddrinfo(const char *restrict node,...)  //
-        // (https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)
-
-        /*
-        // (https://man7.org/linux/man-pages/man3/inet.3.html)
-        char buf[100];
-        struct in_addr addr;
-        int bits;
-
-        //  bits = inet_net_pton(AF_INET, ops_.local_addr, &addr, sizeof(addr));
-
-        bits = inet_net_pton(AF_INET, ops_.local_addr, &env.local_ip.sin_addr, sizeof(in_addr));
-        if (bits != -1)
-        {
-            printf("inet_net_pton() returned: %d\n", bits);
-        }
-
-        //Convert binary format back to presentation, using 'bits'
-        // returned by inet_net_pton().
-
-        if (inet_net_ntop(AF_INET, &addr, bits, buf, sizeof(buf)) != NULL)
-        {
-        // printf("inet_net_ntop() yielded:  %s\n", buf);
-        // Display 'addr' in raw form (in network byte order), so we can
-        // see bytes not displayed by inet_net_ntop(); some of those bytes
-        // may not have been touched by inet_net_ntop(), and so will still
-        // have any initial value that was specified in argv[2].
-        printf("Raw address:              %x\n", htonl(addr.s_addr));
-        }
-        */
-
-        // if interface specified set: local hwif
-        if (ops_.local_addr == "*")
+        if (strchr(ops_.local_addr, '*')) // Listen on all local ipv4 addresses/interfaces
         {
             pverbose("ipv4tcp: bind all local IPv4 addresses !!\n");
-            // inet_pton(env.local_ip.sin_family, env.local_ip.sin_addr.s_addr, &env.local_ip.sin_addr); // AF_INET
+            // inet_pton(env.local_ip.sin_family, ops_.local_addr, &env.local_ip.sin_addr) // (https://man7.org/linux/man-pages/man3/inet.3.html)
+            // inet_aton(const char *cp, struct in_addr *inp);
         }
-        else
+        else // Listen on specified address/interface
         {
-
-            if (inet_aton(ops_.local_addr, &env.local_ip.sin_addr)) // (https://man7.org/linux/man-pages/man3/inet.3.html)
-            {
-             //   pverbose("ipv4tcp: bind local IPv4 address %s !\n", inet_ntoa(env.local_ip.sin_addr));
-                pverbose("SERVER Gooooo !\n");
-            }
-            else
+            ip_addr = inet_addr(ops_.local_addr); // dot-notations to IP network address
+            if (ip_addr == 0)
             {
                 pverbose("ipv4tcp: invalid IP %s !\n", ops_.local_addr); // Error in address !
                 return rtErr;
             }
-            // inet_aton(const char *cp, struct in_addr *inp);
-            // inet_pton(env.local_ip.sin_family, ops_.local_addr, &env.local_ip.sin_addr); // AF_INET
+            else
+            {
+                env.local.sin_addr.s_addr = ip_addr;
+                pverbose("ipv4tcp: ready to start SERVER (%s:%d)\n", inet_ntoa(env.local.sin_addr), env.port);
+            }
         }
     }
     else // _ROLE_CLIENT
     {
+        ip_addr = inet_addr(&ops_.remote_addr[0]); // dot-notations to IP network address
 
-        //
-        // sockaddr server_addr;
-        env.remote_ip.sa_family = AF_INET;
-        inet_pton(env.remote_ip.sa_family, ops_.remote_addr, &env.remote_ip.sa_data);
-
-        /*
-        if (inet_network(ops_.local_addr) <= 0) // (https://man7.org/linux/man-pages/man3/getaddrinfo.3.html)
+        if (ip_addr == 0) // converts 'dot-notation' in 'binary format'
         {
-            pverbose("ipv4tcp: invalid IPv4 address: '%s'\n", ops_.local_addr);
+
+            pverbose("ipv4tcp: invalid IP %s !\n", ops_.remote_addr); // Error in address !
             return rtErr;
         }
-        */
+        else
+        {
+            // inet_aton("63.161.169.137", &myaddr.sin_addr.s_addr);
+            // env.remote_ip.sa_data = ip_addr;
+            //  pverbose("ipv4tcp: ready to start SERVER (Raw address: %x)\n", env.local.sin_addr);
+        }
     }
+    return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
@@ -174,9 +148,8 @@ rt_t set_env_ipv4tcp(options_t &ops_)
 rt_t run_server_ipv4tcp()
 {
     char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
-    int peer_sock;
 
-    int local_sk = socket(AF_INET, SOCK_STREAM, 0);
+    int remote_sk = 0, local_sk = socket(env.local.sin_family, SOCK_STREAM, 0);
 
     if (local_sk < 0)
     {
@@ -185,9 +158,9 @@ rt_t run_server_ipv4tcp()
     }
 
     int opt = 1;
-    setsockopt(local_sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(local_sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)); // set reusable socket
 
-    if (bind(local_sk, (const sockaddr *)&env.local_ip.sin_addr, sizeof(sockaddr)) < 0)
+    if (bind(local_sk, (struct sockaddr *)&env.local, sizeof(sockaddr)) < 0)
     {
         pverbose("ipv4tcp: can't bind local address \n"); // %s:%d !", env.local_ip, env.port); // convert ip to string
         close(local_sk);
@@ -199,39 +172,39 @@ rt_t run_server_ipv4tcp()
         close(local_sk);
         return rtErr;
     }
-    pverbose("ipv4tcp:Listen on ipv4 \n"); // [%s:%d]...\n" env.local_ip, env.port); !!!!!!!!!!!!!!!!!!!!!!!!!!!
+    pverbose("ipv4tcp: listen on (%s:%d)\n", inet_ntoa(env.local.sin_addr), env.port);
 
-    sockaddr peer_addr;
-    socklen_t peer_addr_len = sizeof(peer_addr);
+    socklen_t peer_addr_len = sizeof(env.remote);
 
     while (1)
     {
-        peer_sock = accept(local_sk, &peer_addr, &peer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
-        if (peer_sock < 0)
+        remote_sk = accept(local_sk, &env.remote, &peer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
+        if (remote_sk < 0)
         {
-            pverbose("ipv4tcp: incoming connection from [%s] refused !\n", peer_addr);
+            pverbose("ipv4tcp: incoming connection from [%s] refused \n", env.remote.sa_data);
             continue;
         }
-
-        pverbose("ipv4tcp: incoming connection from [%s] accepted. \n", peer_addr.sa_data);
-        if (env.mss > 0)
-        {
-            int curr_mss = 0;
-            socklen_t curr_mss_len = sizeof(curr_mss);
-            if (getsockopt(peer_sock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) != 0)
-            {
-                pverbose("ipv4tcp: can't negotiate mss \n");
-                continue;
-            }
-            pverbose("ipv4tcp: negotiated mss to [%d] bytes. \n", curr_mss);
-        }
+        /*
+                pverbose("ipv4tcp: incoming connection from [%s] accepted. \n", peer_addr.sa_data);
+                if (env.mss > 0)
+                {
+                    int curr_mss = 0;
+                    socklen_t curr_mss_len = sizeof(curr_mss);
+                    if (getsockopt(peer_sock, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &curr_mss_len) != 0)
+                    {
+                        pverbose("ipv4tcp: can't negotiate mss \n");
+                        continue;
+                    }
+                    pverbose("ipv4tcp: negotiated mss to [%d] bytes. \n", curr_mss);
+                }
+        */
 
         ssize_t total_received = 0;
         double start = now_millis();
 
         while (1) // Until testing_time-out or connection closed !!!!!!!!!!!!!
         {
-            ssize_t recvd = recv(peer_sock, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
+            ssize_t recvd = recv(local_sk, buffer, sizeof(buffer), 0); // (https://man7.org/linux/man-pages/man2/recv.2.html)
             if (recvd <= 0)
                 break; // when receive a packet with empty payload !!!!!!!!!!!!
             total_received += recvd;
@@ -239,12 +212,16 @@ rt_t run_server_ipv4tcp()
 
         double elapsed = now_millis() - start;
         double throughput = (elapsed > 0) ? (_Byte2Megabits(total_received) / (elapsed / 1000.0)) : 0;
+
         pverbose("report: Time %.6f [ms] | Data %d [Bytes] | Throughput %.3f [Mbps]\n", elapsed, total_received, throughput);
 
         free(buffer);
-        close(peer_sock); // If data waiting to be transmitted, close tries to complete this transmission (SO_LINGER).
+        close(remote_sk); // If data waiting to be transmitted, close tries to complete this transmission (SO_LINGER).
     }
     shutdown(local_sk, 2); // 2 = stop both reception and transmission.
+
+
+
     return rtOk;
 }
 
@@ -271,14 +248,14 @@ rt_t run_client_ipv4tcp()
         }
     }
 
-    if (connect(sock, &env.remote_ip, sizeof(env.remote_ip)) < 0)
+    if (connect(sock, &env.remote, sizeof(env.remote)) < 0)
     {
         pverbose("ipv4tcp can't CONNECT socket !");
         close(sock);
         return (rtErr);
     }
 
-    pverbose("ipv4tcp: client mode, loopback at %s:%d \n", env.remote_ip, env.port); // with %s size %d\n", ip, service_port, "block", test->block_size);
+    pverbose("ipv4tcp: client mode, loopback at %s:%d \n", env.remote, env.port); // with %s size %d\n", ip, service_port, "block", test->block_size);
 
     // Packet length settings (socket MSS negotiation !!!)
     /*

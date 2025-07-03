@@ -33,16 +33,50 @@
  *
  */
 
+#include "signal.h"
 #include "version.h"
 #include "globals.h"
 #include "options.h"
 #include "validator.h"
 
+// Signal handler function
+void signal_handler(int signum)
+{
+    if (signum == SIGINT)
+    {
+        printf("Ctrl+C pressed. Ignoring...\n");
+    }
+    else if (signum == SIGTERM)
+    {
+        printf("Received termination signal. Exiting...\n");
+        exit(0);
+    }
+    else
+    {
+        printf("Received signal: %d\n", signum);
+    }
+}
+
 int main(int argc, char *argv[])
 {
     func_ptr *frun;
     print_credits();
-    rt_t pcheck = parse_args(argc, argv); // parsing arguments
+
+    // Set signal handler for SIGINT (Ctrl+C)
+    if (signal(SIGINT, signal_handler) == SIG_ERR)
+    {
+        perror("Failed to set signal handler for SIGINT");
+        return 1;
+    }
+
+    // Set signal handler for SIGTERM (termination)
+    if (signal(SIGTERM, signal_handler) == SIG_ERR)
+    {
+        perror("Failed to set signal handler for SIGTERM");
+        return 1;
+    }
+
+    rt_t pcheck = parser_args(argc, argv); // parsing arguments
     if (pcheck != rtOk)
     {
         return pcheck;

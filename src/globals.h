@@ -74,6 +74,7 @@ typedef rt_t (*func_ptr)(); // ret_t  // pointer to tester routine
 
 #define _MAX_STR_LEN 256
 
+
 // Data Structures for networking local hardware resources
 //
 typedef struct // interfaces

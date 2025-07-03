@@ -30,6 +30,8 @@
 #include "globals.h"
 #include "models.h"
 
+#define _MAX_OPT_LEN _MAX_STR_LEN
+
 typedef struct
 {
     nproto_t model_protocol;               // 0 = unset, _PROTO_DAAS,  _PROTO_IPV4, ...
@@ -39,19 +41,21 @@ typedef struct
     int tst_repeats;                       // repeats test, default is 1
     long tst_time_slot;                    // perform testing for a fixed time period, in seconds
     long long tst_block_size;              // generate traffic by block size
-    long tst_block_size_str[_MAX_STR_LEN]; // generate traffic by block size
+    long tst_block_size_str[_MAX_OPT_LEN]; // generate traffic by block size
     long tst_pkts_num;                     // generate traffic by number of pkts (requires pkt_payload)
                                            //
                                            //  _____Tester parmaters
     int pkt_payload;                       // pkt's payload size (needs to be supported in testing routine)
-                                           // ______Capacity
-    long bandwidth;                        // set reference to nominal speed [Mbps]
     int multilink;                         // enable to use concurrent connections
                                            //
+                                           // ______Capacity
+    long bandwidth;                        // set reference to nominal speed [Mbps]
+                                           //
                                            // ______Peers addressing
-    char local_addr[_MAX_STR_LEN];         // Protocol Local-IF/Addr
-    char remote_addr[_MAX_STR_LEN];        // Protocol Remote Addr (URI Loopback Service)
-    char service_str[_MAX_STR_LEN];        // Service Port Name
+    char local_hwif_str[_MAX_OPT_LEN];     // Protocol Local-IF/Addr
+    char local_addr[_MAX_OPT_LEN];         // Protocol Local-IF/Addr
+    char remote_addr[_MAX_OPT_LEN];        // Protocol Remote Addr (URI Loopback Service)
+    char service_str[_MAX_OPT_LEN];        // Service Port Name
     int service_num;                       // Service Port
 
     //
@@ -59,7 +63,7 @@ typedef struct
     bool csv_enabled;            // output will be formatted
     bool csv_format;             //
     bool csv_no_header;          // csv columns header is/not printed out
-    char csv_path[_MAX_STR_LEN]; // output will be saved
+    char csv_path[_MAX_OPT_LEN]; // output will be saved
                                  // char model_path[_OPT_STR_LEN];  // path to configutation file (libdaas.ini)
 
 } options_t;
@@ -73,6 +77,6 @@ void print_credits();
 void print_usage();
 void print_help();
 
-rt_t parse_args(int argc, char *argv[]);
+rt_t parser_args(int argc, char *argv[]);
 
 #endif // OPTIONS_H

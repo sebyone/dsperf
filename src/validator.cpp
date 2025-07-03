@@ -11,6 +11,9 @@
 //
 extern options_t Options; // options.h
 
+// -------------------------------------------------------------------------------------------------------- !
+// Validator (semanthic checking)
+// -------------------------------------------------------------------------------------------------------- !
 rt_t validate_model_options(func_ptr *_pfrun)
 {
     bool valid;
@@ -38,13 +41,12 @@ rt_t validate_model_options(func_ptr *_pfrun)
     pverbose("Options.csv_path[0]  = %s\n", Options.csv_path);        // output file (default 'stdout')
 
     pverbose("Addressing\n");
-    pverbose("Options.local_addr  = %s\n", Options.local_addr);
-    ;                                                             // Local interface and address
-    pverbose("Options.remote_addr  = %s\n", Options.remote_addr); // Remote address to connect (used in client mode only)
-    pverbose("Options.service_str  = %s\n", Options.service_str); // Service identifier (port for ipv4 stack)
-    pverbose("Options.service_num  = %d\n", Options.service_num); // Service identifier (port for ipv4 stack)
-
-#endif
+    pverbose("Options.local_hwif_str = %s\n", Options.local_hwif_str); // Local interface to bind
+    pverbose("Options.local_addr  = %s\n", Options.local_addr);        // Local interface and address
+    pverbose("Options.remote_addr  = %s\n", Options.remote_addr);      // Remote address to connect (used in client mode only)
+    pverbose("Options.service_str  = %s\n", Options.service_str);      // Service identifier (port for ipv4 stack)
+    pverbose("Options.service_num  = %d\n", Options.service_num);      // Service identifier (port for ipv4 stack)
+#endif // DEBUG
 
     if (Options.model_protocol == _PROTO_NONE || Options.run_mode == _ROLE_NONE) // Invad PROTO or ROLE !
     {
@@ -62,7 +64,6 @@ rt_t validate_model_options(func_ptr *_pfrun)
     switch (Options.model_protocol)
     {
     case _PROTO_IPV4:
-
         if (Options.run_mode == _ROLE_SERVER)
         {
             valid = (strlen(Options.local_addr) > 0);

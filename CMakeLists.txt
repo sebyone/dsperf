@@ -9,10 +9,10 @@ configure_file(
 )
 
 # Options
-option(WITH_DAAS "Enable support for libdaas" OFF)
+option(LIBDAAS_R019 "Enable support for Libdaas R019" OFF)
 message(STATUS "WITH_DAAS = ${WITH_DAAS}")
 
-# Directories & Sources files
+# Sources files
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(TARGET ${PROJECT_NAME} )
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
@@ -73,21 +73,21 @@ endif()
 
 
 # Links libdaas
-if(WITH_DAAS)
-    message(STATUS "Compiling WITH libdaas")
+if(LIBDAAS_R019)
+    #message(STATUS "Compiling WITH libdaas")
     if(EXISTS "${INC_DIR}/daas.hpp" AND EXISTS "${INC_DIR}/daas_types.hpp")
         list(APPEND HDR_FILES
             ${INC_DIR}/daas.hpp
             ${INC_DIR}/daas_types.hpp
         )
-        target_compile_definitions(dperf PRIVATE "WITH_DAAS")
+        target_compile_definitions(dperf PRIVATE "LIBDAAS_R019")
         target_include_directories(dperf PRIVATE ${INC_DIR})
         target_link_libraries(dperf PRIVATE ${LIB_DIR}/libdaas.a)
     else()
         message(FATAL_ERROR "Can't find libdaas in ${INC_DIR}")
     endif()
 else()
-    message(STATUS "Compiling WITHOUT libdaas")
+    message(STATUS "Compiling without libdaas.")
 endif()
 
 # System's libraries
@@ -95,7 +95,7 @@ endif()
 #target_link_libraries(
    # dsperf
    #PRIVATE pthread
-   # PRIVATE bluetooth
+   #PRIVATE bluetooth
 #)
 
 

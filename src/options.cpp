@@ -13,22 +13,27 @@ options_t Options;
 void clearOptions();
 
 /*
-
 #define _MAX_STR_LEN 256
 #define _N_OPTIONS 12
 
+typedef union {
+    long lvalue;
+    double dvalue;
+    bool bvalue;
+    char *svalue[_MAX_OPT_LEN];
+} vtype_t;
+
 stypedef struct // Option example: {1,"S", "<local_addr>:<service>","Starts loopback server mode (without...."}
 {
-int id;
-bool lopt;
-const char ocode;
-const char* locode;
-const char* args;   // empty set no args
-const char* note;   // brief description
-double lvalue;
-double dvalue;
-bool bvalue;
-char *svalue[_MAX_STR_LEN];
+    int id;
+    bool lopt;
+    const char ocode;
+    const char* locode;
+    const char* args;   // empty set no args
+    const char* note;   // brief description
+    unsigned short vtype;
+    vtype_t value;
+
 } option_t;
 
 typedef enum {
@@ -41,39 +46,6 @@ typedef enum {
     ...
 }
 typedef option_t[_N_OPTIONS] options_t, *poptions_t;
-
--------------
-
-typedef struct
-{
-    nproto_t model_protocol;        // 0 = unset, _PROTO_DAAS,  _PROTO_IPV4, ...
-    tclass_t model_class;           // 0 = unset, Features, Capacity, Continuity, etc.etc.
-                                    //
-    hrole_t run_mode;               // 0 = unset, _ROLE_CLIENT, _ROLE_SERVER, ...
-    int tst_repeats;                // repeats test, default is 1
-    long tst_time_slot;             // perform testing for a fixed time period, in seconds
-    long tst_block_size;            // generate traffic by block size
-    long tst_pkts_num;              // generate traffic by number of pkts (requires pkt_payload)
-                                    //
-                                    //  _____Tester parmaters
-    int pkt_payload;                // pkt's payload size (needs to be supported in testing routine)
-                                    // ______Capacity
-    long bandwidth;                 // set reference to nominal speed [Mbps]
-    int multilink;                  // enable to use concurrent connections
-                                    //
-                                    // ______Peers addressing
-    char local_addr[_MAX_STR_LEN];  // Protocol Local-IF/Addr
-    char remote_addr[_MAX_STR_LEN]; // Protocol Remote Addr (URI Loopback Service)
-    int service_num;                // Loopback Service Port
-                                    //
-                                    // ______Output formatting
-    bool csv_enabled;               // output will be formatted
-    bool csv_format;                //
-    bool csv_no_header;             // csv columns header is/not printed out
-    char csv_path[_MAX_STR_LEN];    // output will be saved
-                                    // char model_path[_OPT_STR_LEN];  // path to configutation file (libdaas.ini)
-} options_t;
-
 */
 
 #define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:V:h:w:g:p:o:x:l"
@@ -89,9 +61,9 @@ const static option _LONG_OPTIONS[] = { // (https://www.gnu.org/software/libc/ma
     {0, 0, 0, 0}};               //
 
 // -------------------------------------------------------------------------------------------------------- !
-// Parsing
+// Parser (syntax checking)
 // -------------------------------------------------------------------------------------------------------- !
-rt_t parse_args(int argc, char *argv[]) // Syntax validations
+rt_t parser_args(int argc, char *argv[]) // Syntax validations
 {
 
     int option;
@@ -111,10 +83,9 @@ rt_t parse_args(int argc, char *argv[]) // Syntax validations
 
     while ((option = getopt_long(argc, argv, _SHORT_OPTIONS, _LONG_OPTIONS, &loption_index)) != -1)
     {
-
-        //DEBUG
-        //printf("option %c , %d", option, loption_index);
-        //printf(" with arg %s\n", optarg);
+        // DEBUG
+        // printf("option %c , %d", option, loption_index);
+        // printf(" with arg %s\n", optarg);
 
         switch (option)
         {
@@ -129,6 +100,7 @@ rt_t parse_args(int argc, char *argv[]) // Syntax validations
         case 4: // --continuity
             Options.model_class = __unsetted;
             break;
+
         case 5: // --ipv4
             Options.model_protocol = _PROTO_IPV4;
             break;
@@ -136,8 +108,7 @@ rt_t parse_args(int argc, char *argv[]) // Syntax validations
             Options.model_protocol = _PROTO_DAAS;
             break;
 
-            // short options _____________________
-        case 'v': //  how dsperf details and exit
+        case 'v': // short options _____________________ how dsperf details and exit
             print_credits();
             return rtExit;
             break;
@@ -323,7 +294,7 @@ void print_help()
     printf("  -w <bandwidth>                    Sets reference to a nominal speed [Mbps] (bandwidth)\n");
     printf("  -x                                Enable to use concurrent connections \n");
     printf("  -p <service>                      Sets service number (port inipv4) \n");
-
+    //
     printf("\nRun mode");
     printf("  -S <local_addr>:<service>         Starts loopback server mode (if omitted uses default service/port)\n");
     printf("  -s <remote_addr>:<service>        Starts as client to test on loopback \n");
@@ -331,12 +302,12 @@ void print_help()
     printf("  -n <repetitions>                  Repeats test\n");
     printf("  -t <period>                       Continuosly testing for time period in [seconds] (max 8h)\n");
     printf("  -V                                Enable messages for the looping server events\n");
-
+    //
     printf("\nTraffic generator\n");
     printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
     printf("  -c <count>                        Generates traffic trasferring number of packets with payload size fixed (use '-p')\n");
     printf("  -o <bytes>                        Packet's payload size in bytes (tries to negotiate payload)\n");
-
+    //
     printf("\nProtocol and Model\n");
     printf("  --ipv4                            Uses IPv4/TCP underlay network (RFCs 790-791)\n");
     printf("  --daas                            Uses DaaS overlay \n");
@@ -345,14 +316,13 @@ void print_help()
     printf("  --capacity                        Applies test model to mesure throughput (default)\n");
     printf("  --security                        Applies test model to check security threats\n");
     printf("  --continuity                      Applies test model to evaluate availability and its continuity\n");
-
+    //
     printf("\nReporting\n");
     printf("  -y <0/1>                          Outputs results in csv format: '1' no header, '0' with header (default)\n");
     printf("  -f <filename>                     Outputs testing results in csv format to file (client only)\n");
     printf("\n");
-
+    //
     printf("\tNote: commands in upper-case will be available only in server mode.\n");
-
     printf("\n");
 }
 
@@ -381,11 +351,9 @@ void print_usage() // const char *prog_name
 void clearOptions()
 {
     memset(&Options, 0, sizeof(options_t));
-
     // Model
     Options.model_protocol = _PROTO_NONE; // Test protocol (IPV4, DAAS, etc.etc.)
     Options.model_class = __unsetted;     // Test class (Features, Capacity, etc.etc.)
-
     // Run mode
     Options.run_mode = _ROLE_NONE; // client or loopback server
     Options.tst_repeats = 1;       // repetitions counter
@@ -393,19 +361,17 @@ void clearOptions()
     Options.tst_block_size = 0;    // Traffic by block-size
     Options.tst_pkts_num = 0;      // Testing for a lot of packet
     Options.multilink = 0;         // enable to use concurrent connections
-
     // Class: Caqpacity
     Options.pkt_payload = 0; // Packet payload size
     Options.bandwidth = 0;   // set reference to nominal speed [Mbps]
-
     // Formatting
     Options.csv_enabled = false;   // print out in csv format
     Options.csv_no_header = false; // print out csv columns header
     Options.csv_path[0] = '\0';    // output file (default 'stdout')
-
     // Addressing
-    Options.local_addr[0] = '\0';  // Local interface and address
-    Options.remote_addr[0] = '\0'; // Remote address to connect (used in client mode only)
-    Options.service_str[0] = '\0'; // Local interface and address
-    Options.service_num = 0;       // Service identifier (port for ipv4 stack)
+    Options.local_hwif_str[0] = '\0'; // Local interface to bind
+    Options.local_addr[0] = '\0';     // Local interface and address
+    Options.remote_addr[0] = '\0';    // Remote address to connect (used in client mode only)
+    Options.service_str[0] = '\0';    // Local interface and address
+    Options.service_num = 0;          // Service identifier (port for ipv4 stack)
 }
