@@ -8,14 +8,14 @@
 #include <stdio.h>
 #include <string.h>
 
-ret_t resetVars(capacity_vars_t &_cvars)
+rt_t resetVars(capacity_vars_t &_cvars)
 {
     memset(&_cvars, 0, sizeof(capacity_vars_t));
     return rtOk;
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------!
-ret_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_)
+rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_)
 {
     switch (switch_)
     {

@@ -34,6 +34,6 @@
 
 #pragma once
 
-ret_t validate_model_options(exefunc_t &_pfrun);
+rt_t validate_model_options(func_ptr *_pfrun);
 
 #endif // VALIDATOR_H

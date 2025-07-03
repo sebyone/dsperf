@@ -49,10 +49,23 @@
 #include "../models/capacity.h"
 #include "../options.h"
 
-ret_t set_env_ipv4tcp(options_t &ops_); // set default Options values for model
+// ipv4_tcp defines
+#define PACKET_BUFFER_MAX_SIZE 2048
 
-ret_t run_server_ipv4tcp(); // start loopback server
+#define IPV4_MIN_MSS 256
+#define IPV4_MAX_MSS 1460
 
-ret_t run_client_ipv4tcp(); // performs test
+#define IPV4_MIN_SPORT 0
+#define IPV4_MAX_SPORT 65535
+#define IPV4_DEF_SPORT 3001
+
+
+
+
+rt_t set_env_ipv4tcp(options_t &ops_); // set default Options values for model
+
+rt_t run_server_ipv4tcp(); // start loopback server
+
+rt_t run_client_ipv4tcp(); // performs test
 
 #endif // MODEL_IPV4TCP_H

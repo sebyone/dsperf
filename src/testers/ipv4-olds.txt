@@ -120,3 +120,143 @@ else
     }
 }
 */
+/*
+
+   int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+        {
+            perror("socket");
+            return;
+        }
+
+        struct sockaddr_in serv_addr = {
+            .sin_family = AF_INET,
+            .sin_port = htons(server_port),
+        };
+        inet_pton(AF_INET, server_ip, &serv_addr.sin_addr);
+
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+        {
+            perror("connect");
+            close(sock);
+            continue;
+        }
+
+        // Get MSS
+        int mss = 0;
+        socklen_t optlen = sizeof(mss);
+        if (getsockopt(sock, IPPROTO_TCP, TCP_MAXSEG, &mss, &optlen) == 0)
+        {
+            // printf("[CLIENT] MSS negotiated: %d bytes\n", mss);
+        }
+        /*
+        else {
+            perror("getsockopt");
+            mss = 1448;
+        }
+        if (mss > 1448) {
+            printf("[CLIENT] Warning: MSS (%d) > 1448; using 1448 for safety.\n", mss);
+            mss = 1448;
+        }
+        */
+
+        int chunk_size = (mss < block_size) ? mss : block_size;
+        char *buffer = malloc(chunk_size);
+        memset(buffer, 'A', chunk_size);
+
+        FILE *csv = fopen(csv_path, i == 0 ? "w" : "a");
+        int csv_enabled = 1;
+        if (!csv)
+        {
+            csv_enabled = 0;
+        }
+        if (i == 0 && csv_enabled == 1)
+            fprintf(csv, "Timestamp_ms,Num Pkt,Dimensione Pkt,Throughput_MBps,RTT_ms\n");
+
+        char ping_msg[] = "PING";
+        char pong_msg[5] = {0};
+        double rtt_ms = 0;
+
+        double ping_start = get_time_microseconds();
+        if (send(sock, ping_msg, sizeof(ping_msg), 0) != sizeof(ping_msg))
+        {
+            perror("[CLIENT] Error sending PING");
+        }
+        else
+        {
+            ssize_t r = recv(sock, pong_msg, sizeof(pong_msg), 0);
+            if (r != sizeof(pong_msg) || strcmp(pong_msg, "PONG") != 0)
+            {
+                fprintf(stderr, "[CLIENT] Invalid PONG response\n");
+            }
+            else
+            {
+                double ping_end = get_time_microseconds();
+                rtt_ms = (ping_end - ping_start) / 1000.0;
+                // printf("[CLIENT] RTT misurato: %.3f ms\n", rtt_ms);
+            }
+        }
+
+        int packet_length = chunk_size; //!!!!!!! negoziato!!!!!!!
+        int header_bytes = 40;          // TCP/IP standard header
+        int payload_bytes = chunk_size;
+        double efficiency = ((double)payload_bytes / (payload_bytes + header_bytes)) * 100.0;
+        double packet_to_send = (double)block_size / (double)packet_length;
+
+        if (!formatting_output_csv)
+        {
+            printf("\n[SUMMARY RUN %d/%d]\n", i + 1, repetitions);
+            printf("  Data Block:         %.3f MB\n", block_size / 1.024e6);
+            printf("  Protocol:           IPv4\n");
+            printf("  Packet Length:      %d bytes\n", packet_length);
+            printf("  Header:             %d bytes\n", header_bytes);
+            printf("  Efficiency:         %.3f %%\n", efficiency);
+            printf("  Pkts to send:     %.3f\n", packet_to_send); // numero pacchetti da inviare
+        }
+
+        // printf("[CLIENT] Sending %ld bytes in chunks of %d bytes...\n", block_size, chunk_size);
+
+        int packet_num = 0;
+        int total_sent = 0;
+        double start_time = get_time_microseconds();
+        // double last_time = start_time;
+
+        while (total_sent < block_size)
+        {
+            int to_send = block_size - total_sent;
+            if (to_send > chunk_size)
+                to_send = chunk_size;
+
+            ssize_t sent = send(sock, buffer, to_send, 0);
+            if (sent <= 0)
+                break;
+
+            // double now = get_time_microseconds();
+            // double delta_us = now - last_time;
+            // double delta_sec = delta_us / 1e6;
+            // double throughput_MBps = (sent / 1e6) / (delta_sec > 0 ? delta_sec : 1e-9);
+            // printf("[+%.6f s] Sent %zd bytes (%.3f MB/s)\n", (now - start_time) / 1e6, sent, throughput_MBps);
+            //  Salvare i dati in memoria e salvare sul file al termine del processo di trasferimento
+            /*
+            if(csv_enabled==1){
+                fprintf(csv, "%.3f,%d,%zd,%.4f,%.6f\n", (now - start_time) / 1000, packet_num, sent, throughput_MBps, rtt_ms);
+            }
+            */
+            total_sent += sent;
+            // last_time = now;
+            packet_num++;
+        }
+
+        double end_time = get_time_microseconds();
+        double elapsed_ms = (end_time - start_time) / 1000; // us -> ms
+
+        // Dopo aver effettuato il test, posso ottenere il numero di pacchetti persi soltanto ricevendo il numero effettivo che ha raggiunto il server
+        // Ovvero il server risponde con il numero effettivo di pacchetti che ha ricevuto!!! ( per testare protocolli stateless ad esempio UDP, nel caso di TCP senza accedere al raw socket!!!)
+
+        double avg_throughput_MBps = (total_sent / 1.024e6) / (elapsed_ms / 1000); // Ottengo Mega byte per secondo
+        double avg_throughput_Mbps = avg_throughput_MBps * 8;                      // Ottengo Mega bit per secondo
+
+        double throughput_pps = packet_num / (elapsed_ms / 1000);
+
+
+*/

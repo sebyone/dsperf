@@ -18,8 +18,6 @@
  *
  */
 
-
-
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -27,7 +25,7 @@
 
 // Config
 #undef LIBDAAS_V19
-#undef DEBUG
+#define DEBUG
 #define VERBOSE
 
 #include "helpers/utils.h"
@@ -49,7 +47,30 @@ typedef enum // Roles
   _ROLE_SERVER
 } hrole_t;
 
-typedef ret_t (*exefunc_t)(void); // pointer to tester routine
+#define noexec void(0)
+
+#ifdef VERBOSE
+#include <stdio.h>
+#define pverbose printf
+#else
+#define pverbose noexec
+#endif
+
+#ifdef DEBUG
+#include <stdio.h>
+#define pdebug printf
+#else
+#define pdebug noexec
+#endif
+
+typedef enum 
+{
+  rtOk = 0, // No error
+  rtExit,   // stdlib EXIT_FAILURE 1
+  rtErr     // Generic error
+} rt_t;
+
+typedef rt_t (*func_ptr)(); // ret_t  // pointer to tester routine
 
 #define _MAX_STR_LEN 256
 

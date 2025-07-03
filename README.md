@@ -1,4 +1,4 @@
-# dperf - DaaS Network Performance Tool
+# dperf - DaaS Performance Network Tool
 
 **Versione:** 0.0.34
 
@@ -31,7 +31,7 @@ The performances of a network can be evaluated with respect to four factors: **c
 
 - **Capabilities**: Summarizes the functional capabilities.
 - **Availability**: Accessibility and uptime of the network.
-- **Bandwidth**: Refers to the rate of data that may be delivered over physical or logical links.
+- **Performace**: Refers to the rate of data that may be delivered over physical or logical links.
 - **Security**: Summarizes the ability of the network to ensure the peers identification, confidentiality and integrity of the transferred information.
 
 

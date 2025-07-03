@@ -78,7 +78,7 @@ typedef struct // Model vars Capacity test
 } capacity_vars_t;
 
 // ------------------------------------------------------------------------------------------------------------------------------!
-ret_t resetVars(capacity_vars_t &_cvars);
-ret_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_);
+rt_t resetVars(capacity_vars_t &_cvars);
+rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_);
 
 #endif // MODEL_CAPACITY_H

@@ -61,6 +61,6 @@ $ ethtool eth0
   */
 } hwif_t, *phwif_t;
 
-ret_t ipv4tcp_bandwidth(int ifn, long dband);
+rt_t ipv4tcp_bandwidth(int ifn, long dband);
 
 #endif // HARDWARE_H

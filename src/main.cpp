@@ -40,17 +40,17 @@
 
 int main(int argc, char *argv[])
 {
+    func_ptr *frun;
     print_credits();
-    ret_t pcheck = parse_args(argc, argv); // parsing arguments
+    rt_t pcheck = parse_args(argc, argv); // parsing arguments
     if (pcheck != rtOk)
     {
         return pcheck;
     }
-    exefunc_t frun = NULL;
     pcheck = validate_model_options(frun); // validate parsed options values
     if (pcheck != rtOk)
     {
         return pcheck;
     }
-    return frun(); // uses chosed model_protocol and role
+    return ((*frun)()); // uses chosed model_protocol and role
 }

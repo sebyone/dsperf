@@ -41,27 +41,5 @@
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 #define pinToggle(pin) PINB ^= 1UL _BV()
 
-#define noexec void(0)
-
-#ifdef VERBOSE
-#include <stdio.h>
-#define pverbose printf
-#else
-#define pverbose noexec
-#endif
-
-#ifdef DEBUG
-#include <stdio.h>
-#define pdebug printf
-#else
-#define pdebug noexec
-#endif
-
-typedef enum
-{
-    rtOk = 0,   // No error
-    rtExit = 1, // stdlib EXIT_FAILURE 1
-    rtErr = 2   // Generic error
-} ret_t;
 
 #endif // UTILS_H
