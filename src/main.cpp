@@ -44,7 +44,9 @@ void signal_handler(int signum)
 {
     if (signum == SIGINT)
     {
-        printf("Ctrl+C pressed. Ignoring...\n");
+        printf("\nCtrl+C pressed !\n");
+        // shutdown....
+        exit(0);
     }
     else if (signum == SIGTERM)
     {

@@ -46,7 +46,7 @@ rt_t validate_model_options(func_ptr *_pfrun)
     pverbose("Options.remote_addr  = %s\n", Options.remote_addr);      // Remote address to connect (used in client mode only)
     pverbose("Options.service_str  = %s\n", Options.service_str);      // Service identifier (port for ipv4 stack)
     pverbose("Options.service_num  = %d\n", Options.service_num);      // Service identifier (port for ipv4 stack)
-#endif // DEBUG
+#endif                                                                 // DEBUG
 
     if (Options.model_protocol == _PROTO_NONE || Options.run_mode == _ROLE_NONE) // Invad PROTO or ROLE !
     {

@@ -73,34 +73,30 @@ IEEE 802.21     MIH (Media Independent Handoff) / DaaS
 
 #include "globals.h"
 
-
 typedef enum // Testing Models
 {
-  __unsetted = 0,
-  __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
-  __Capabilities, // compliance with features matrix
-  __Availability, // service continuity in time windows
-  __Security      // security asserts test: data sniffing, peer shadow identity
+    __unsetted = 0,
+    __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
+    __Capabilities, // compliance with features matrix
+    __Availability, // service continuity in time windows
+    __Security      // security asserts test: data sniffing, peer shadow identity
 } tclass_t;
-
 
 typedef struct
 {
-    nproto_t nproto; // Protocol
-    tclass_t tclass; // Model
+    nproto_t nproto;   // Protocol
+    tclass_t tclass;   // Model
     unsigned testerid; // Variant
     const char *title;
     const char *info;
     const char *team;
 } model_info_t, *pmodel_info_t;
 
-
 typedef enum
 {
     _OUTS_CSV_HEADER = 1, // header
     _OUTS_CSV_ROW,        // simple line
     _OUTS_SUMMARY,
-    _OUTS_SUMMARY_ROW
 } report_item_t;
 
 // ------------------------------------------------------------------------------------------------------------------------------!

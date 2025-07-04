@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(dperf VERSION 0.1.36 LANGUAGES C CXX)
+project(dperf VERSION 0.1.03 LANGUAGES C CXX)
 
 # Version Header
 configure_file(
@@ -8,9 +8,11 @@ configure_file(
     @ONLY
 )
 
+message(STATUS "Compile: ${CMAKE_BUILD_TYPE}")
+
 # Options
 option(LIBDAAS_R019 "Enable support for Libdaas R019" OFF)
-message(STATUS "WITH_DAAS = ${WITH_DAAS}")
+message(STATUS "LIBDAAS_R019 = ${LIBDAAS_R019}")
 
 # Sources files
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -33,7 +35,11 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-target_compile_options( ${TARGET} PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wunused-parameter -Wno-long-long -pedantic )
+if(CMAKE_BUILD_TYPE EQUAL "Debug")
+message(STATUS "set debug ")
+endif()
+
+target_compile_options( ${TARGET} PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wunused-parameter -Wno-long-long -pedantic -ggdb )
 target_compile_features( ${TARGET} PRIVATE cxx_std_17 )
 
 if(WIN32)
@@ -98,7 +104,10 @@ endif()
    #PRIVATE bluetooth
 #)
 
-
+#add_custom_command(TARGET myTarget POST_BUILD
+#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE1}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
+#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE2}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
+#)
 
 
 

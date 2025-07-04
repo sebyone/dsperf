@@ -121,11 +121,14 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
         case 'k': // Disable all system's messages
         case 'l': // Show local interfaces for protocol
         case 'g': // Disable all system's messages
-        case 'V': // Enables messages for the looping server events
             pverbose("parser:  unsupported options '%s' ! \n", option);
             return rtErr;
             break;
 
+        case 'V': // Enables messages for the looping server events
+            Options.pktverbose = true;
+            break;
+            
         case 'x': // Enables concurrent connections
             Options.multilink = atoi(optarg);
             if (Options.multilink < 1)
@@ -263,7 +266,7 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
             break;
 
         case 'y': // Enables output in csv format: '1' no header, '0' with header (default)
-            Options.csv_format = true;
+            Options.csv_enabled = true;
             Options.csv_no_header = false;
             if (strlen(optarg) > 1)
             {
@@ -364,14 +367,17 @@ void clearOptions()
     // Class: Caqpacity
     Options.pkt_payload = 0; // Packet payload size
     Options.bandwidth = 0;   // set reference to nominal speed [Mbps]
-    // Formatting
-    Options.csv_enabled = false;   // print out in csv format
-    Options.csv_no_header = false; // print out csv columns header
-    Options.csv_path[0] = '\0';    // output file (default 'stdout')
+
     // Addressing
     Options.local_hwif_str[0] = '\0'; // Local interface to bind
     Options.local_addr[0] = '\0';     // Local interface and address
     Options.remote_addr[0] = '\0';    // Remote address to connect (used in client mode only)
     Options.service_str[0] = '\0';    // Local interface and address
     Options.service_num = 0;          // Service identifier (port for ipv4 stack)
+
+    // Formatting
+    Options.csv_enabled = false;   // print out in csv format
+    Options.csv_no_header = false; // print out csv columns header
+    Options.csv_path[0] = '\0';    // output file (default 'stdout')
+    Options.pktverbose = false;    // Packet verbose mode
 }

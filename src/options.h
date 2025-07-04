@@ -57,14 +57,13 @@ typedef struct
     char remote_addr[_MAX_OPT_LEN];        // Protocol Remote Addr (URI Loopback Service)
     char service_str[_MAX_OPT_LEN];        // Service Port Name
     int service_num;                       // Service Port
-
-    //
-    // ______Output formatting
-    bool csv_enabled;            // output will be formatted
-    bool csv_format;             //
-    bool csv_no_header;          // csv columns header is/not printed out
-    char csv_path[_MAX_OPT_LEN]; // output will be saved
-                                 // char model_path[_OPT_STR_LEN];  // path to configutation file (libdaas.ini)
+                                           //
+                                           // ______Output formatting
+    bool csv_enabled;                       // output will be formatted
+    bool csv_no_header;                    // csv columns header is/not printed out
+    char csv_path[_MAX_OPT_LEN];           // output will be saved
+                                           //  char model_path[_OPT_STR_LEN];  // path to configutation file (libdaas.ini)
+    bool pktverbose;                       // Verbose mode
 
 } options_t;
 
