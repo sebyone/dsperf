@@ -21,7 +21,7 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
     {
     case _OUTS_CSV_HEADER:
         printf("#/#\t");
-        printf("Data Block [MB]\t");
+        printf("Data-Block [MB]\t");
         printf("Protocol\t");
         printf("Payload [bytes]\t");
         printf("Header [bytes]\t");
@@ -31,20 +31,20 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
         printf("Pkts loss\t");     //
         printf("Data sent[MB]\t"); // Mega bytes
         printf("Pkt Err.[%%]\t");
-        printf("Transfer testing_time [ms]\t");
+        printf("Transfer time [ms]\t");
         printf("Throughput [MB/s]\t[Mbps]\t[pps]\n");
         break;
 
     case _OUTS_CSV_ROW:
         printf("%d//%d\t", vars_.tstcounter);
         printf("%.3f\t", _Byte2Megabyte(vars_.blocksize));
-        printf("%s\t", *(info_.title));
-        printf("%d\t", vars_.pktpayload);
-        printf("%d\t", vars_.pktheader);
+        printf("%d\t", info_.nproto);
+        printf("%.2ft", vars_.pktpayload);
+        printf("%.2f\t", vars_.pktheader);
         printf("%.3f\t", vars_.pktefficiency);
         printf("%.3f\t", vars_.pktstosend);               // numero pacchetti da inviare
-        printf("%d\t", vars_.pktssent);                   // numero pacchetti inviati
-        printf("%d\t", vars_.pktsloss);                   //
+        printf("%0f\t", vars_.pktssent);                  // numero pacchetti inviati
+        printf("%0f\t", vars_.pktsloss);                  //
         printf("%.3f\t", _Byte2Megabyte(vars_.datasent)); // Mega bytes
         // printf("  Data Lost:         %d bytes\n", total_lost);
         printf("%.3f\t", vars_.pktsloss / vars_.pktssent * 100);
@@ -53,7 +53,7 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
         break;
 
     case _OUTS_SUMMARY:
-        printf("\nCapacity Test:\n");
+        printf("\nCapacity report:\n");
         printf("    Tester:         %s\n", info_.title);
         printf("                    %s\n", info_.info);
         printf("    Runs            #%d\n", vars_.tstcounter); // Sitemare !
@@ -68,7 +68,7 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
         printf("    Data Lost:      %.0f [Bytes]\n", vars_.dataloss);
         printf("    Errors:         %.2f [%%]\n", vars_.tsterrors);
         printf("    Set-up time:    %.2f [ms]\n", vars_.setuptime);
-        printf("    Trip time:      %.2f [ms]\n", vars_.triptime);        
+        printf("    Trip time:      %.2f [ms]\n", vars_.triptime);
         printf("    Total time:     %.2f [ms]\n", vars_.totaltime);
         printf("    Jitter:         %.2f [%]\n", (vars_.jitter));
         printf("    Throughput:     %.2f [Mbps]\n", vars_.throughput);

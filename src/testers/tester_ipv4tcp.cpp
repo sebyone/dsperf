@@ -27,38 +27,39 @@
 
 #include "../helpers/timers.h"
 #include "../helpers/datetime.h"
-#include "../hwinterfaces.h"
+#include "../system.h"
 
-const model_info_t info = {       // TESTER:
-    _PROTO_IPV4,                  // protocol
-    __Capacity,                   // model
-    0,                            // variant
-    "IPv4/TCP",                   // title
-    "Throughput/Bandwidth v.01a", // description
-    "developers@sebyone.it"};     // author
+// -------------------------------------------------------------------------------------------------------- !
+static const model_info_t info = { // TESTER:
+    _PROTO_IPV4,                   // protocol
+    __Capacity,                    // evaluation model
+    0,                             // variant
+    "IPv4/TCP",                    // title
+    "Throughput/Bandwidth v.01a",  // description
+    "developers@sebyone.it"};      // author
+
+// -------------------------------------------------------------------------------------------------------- !
+static capacity_vars_t vars; // capacity_vars
 
 // -------------------------------------------------------------------------------------------------------- !
 static struct // Specific ipv4 parameters
 {
-    int repeat_n;       // test repetittion
-    short int port;     // IPv4 Port
-    sockaddr_in local;  // server mode local hwif/IP
-    sockaddr rpeer;     // connected remote
-    int local_hwif;     // local Interface !!!!!!!!!!!!!!!!!!
-    sockaddr_in remote; // Client mode only
-    unsigned mss;       // mss size
-    double bandwidth;
+    int repeat_n;        // test repetittion
+    short int port;      // IPv4 Port
+    sockaddr_in local;   // server mode local hwif/IP
+    sockaddr rpeer;      // connected remote
+    int local_hwif;      // local Interface !!!!!!!!!!!!!!!!!!
+    sockaddr_in remote;  // Client mode only
+    ssize_t mss;         // mss size
+    double bandwidth_if; // retrieved from hardware IF
+    ssize_t block_size;
     //
     bool _ocsv;
     bool _ocsvheader;
     bool _opkts;
 } env; // env_settings_ipv4_t;
 
-// static env_settings_ipv4_t env;
-
-capacity_vars_t vars; // capacity_vars
 // -------------------------------------------------------------------------------------------------------- !
-
 void setDefaultEnv()
 {
     memset(&env, 0, sizeof(env));
@@ -76,9 +77,10 @@ void setDefaultEnv()
     env.remote.sin_addr.s_addr = INADDR_ANY; // Set all locals
     env.remote.sin_port = htons(env.port);   // default port setted
 
-    env.mss = 0;             // =0 negotiate >0 fixed
-    env.bandwidth = 0;       // nominal Speed: 50000Mb/s
-    env.mss = 0;             // packet payload
+    env.mss = 0;          // 0 = use current/negotiate, >0 = force negotiate/default
+    env.bandwidth_if = 0; // nominal Speed: 50000Mb/s
+    env.block_size = 0;   // output packet contents
+    //
     env._ocsv = false;       // enable csv
     env._ocsvheader = false; // csv header
     env._opkts = false;      // output packet contents
@@ -99,7 +101,7 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
         }
         env.port = ops_.service_num;
     }
-    else // set default
+    else // set default port
     {
         pverbose("ipv4tcp: uses default service port: '%d' !\n", env.port);
     }
@@ -108,27 +110,30 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
     env.local.sin_port = htons(env.port); // Service
     env.remote.sin_port = htons(env.port);
 
+    env.mss = ops_.pkt_payload_size; // packet payload
+
     vars.blocksize = (double)ops_.tst_block_size; // block-size mode
     vars.timeslot = (double)ops_.tst_time_slot;   // timed mode
 
-    vars.bandwidth = (double)ops_.bandwidth; // Reference to bandwidth !!!!!!!
+    vars.bandwidth = (env.bandwidth_if == 0) ? ops_.bandwidth : env.bandwidth_if; // Reference to bandwidth !!!!!!!
 
     env._ocsv = ops_.csv_enabled;
     env._ocsvheader = !ops_.csv_no_header;
     env._opkts = ops_.pktverbose; // Verbose mode
-
-    in_addr_t ip_addr = 0;
 
     if (ops_.run_mode == _ROLE_SERVER)
     {
         if (strchr(ops_.local_addr, '*')) // Set default local addresses/interfaces
         {
             // TODO: get local address !
+            // TODO: retrieves bandwidth from hardware
             // inet_pton(env.local_ip.sin_family, ops_.local_addr, &env.local_ip.sin_addr)
             pverbose("ipv4tcp: bind local default IPv4 addresses !\n");
         }
         else // Listen on specified address/interface
         {
+            // TODO: retrieves bandwidth from hardware
+            in_addr_t ip_addr = 0;
             if ((ip_addr = inet_addr(ops_.local_addr)) == 0) // dot-notations to IP network address
             {
                 pverbose("ipv4tcp: invalid IP %s !\n", ops_.local_addr); // Error in address !
@@ -164,7 +169,7 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 // -------------------------------------------------------------------------------------------------------- !
 rt_t run_server_ipv4tcp()
 {
-    ssize_t recvd, total_received;
+    ssize_t recvd, total_recv_data, total_recv_pkts;
     double start, elapsed, throughput;
     char *buffer;
     int opt, remote_sk = 0, local_sk = socket(env.local.sin_family, SOCK_STREAM, 0);
@@ -180,23 +185,31 @@ rt_t run_server_ipv4tcp()
     if (env.mss > 0) // Set mss
     {
         curr_mss = (size_t)env.mss;
-        if (getsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &len) != 0) // set mss !!!!!!!!!!!!!
+        if (setsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, len) != 0) // set payload size (mss) !
         {
-            pverbose("ipv4tcp: negotited mss socket option (TCP_MAXSEG) error [%d] !\n", errno);
+            pverbose("ipv4tcp: socket set option TCP_MAXSEG fault #%d %s\n", errno, strerror(errno));
         }
     }
-    if (getsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &len) == 0)
+
+    if (getsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &len) == 0) // read back payload size
     {
         pverbose("ipv4tcp: packet payload (mss) %d [bytes] !\n", curr_mss);
     }
     else
     {
-        pverbose("ipv4tcp: negotited mss socket option (TCP_MAXSEG) error [%d] !\n", errno);
+        pverbose("ipv4tcp: negotited mss socket option (TCP_MAXSEG) fault [%d] !\n", errno);
     }
 
     if (setsockopt(local_sk, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) // set reusable socket
     {
-        pverbose("ipv4tcp: socket option (SO_REUSEADDR) error [%d]\n!", errno);
+        pverbose("ipv4tcp: socket option (SO_REUSEADDR) fault [%d]\n!", errno);
+    }
+
+    struct timeval tv; // TIMEOUT_MS 30 Secs Timeout
+    tv.tv_usec = 30;
+    if (setsockopt(local_sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) // set timer for recv_socket
+    {
+        pverbose("ipv4tcp: socket option (SO_RCVTIMEO) fault  [%d] !\n", errno);
     }
 
     if (bind(local_sk, (struct sockaddr *)&env.local, sizeof(sockaddr)) < 0)
@@ -227,50 +240,57 @@ rt_t run_server_ipv4tcp()
         }
         pverbose("ipv4tcp: open connection remote [%s] \n", inet_ntoa(env.remote.sin_addr)); // inet_ntoa() ???
 
-        // TODO: implement test protocol like fresbee !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        total_received = 0;
+        // TODO: implement test protocol like fresbee !
+        total_recv_data = 0;
+        total_recv_pkts = 0;
 
         start = now_millis();
         while (1) // TODO: until testing_time-out or connection closed !!!!!!!!!!!!!
         {
-            recvd = recv(remote_sk, buffer, sizeof(buffer), MSG_DONTWAIT); // (https://man7.org/linux/man-pages/man2/recv.2.html)
-            if (recvd > 0)
+            recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
+            if (recvd < 0)
             {
-                if (env._opkts) // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
-                {
-                    printf("New pkt header");
-                    printf(buffer);
-                    printf("\n");
-                }
-            }
-            else
-            {
-                pverbose("ipv4tcp: socket read error [%d]\n!", errno); // error EAGAIN or EWOULDBLOCK.
+                pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
                 break;
             }
-            total_received += recvd;
+            total_recv_pkts++;
+            if (recvd == 0)
+            {
+                break;
+            }
+            total_recv_data += recvd;
+
+            if (env._opkts)
+            {
+                // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
+                printf("recvd pkt #%d - data size %d [bytes] \n", total_recv_pkts, recvd);
+                // printf(buffer);
+                // printf("\n");
+            }
         }
         elapsed = now_millis() - start;
 
-        throughput = (elapsed > 0) ? (_Byte2Megabits(total_received) / (elapsed / 1000.0)) : 0;
+        throughput = (elapsed > 0) ? (_Byte2Megabits(total_recv_data) / (elapsed * 1000.0)) : 0;
         close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
-        pverbose("ipv4tcp: socket closed, connection time %.6f [ms], Bytes recvd %d [Bytes], throughput %.3f [Mbps] \n", elapsed, total_received, throughput);
+        pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %d [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
     }
     shutdown(local_sk, 2); // 2 = stop both reception and transmission.
     free(buffer);
     // -----------
-
     return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
 // CLIENT TESTER
+// a) block-size mode: send all data and computes total time.
+// b) time-windowed mode: computes how many data are been sent in the time-windows period.
 // -------------------------------------------------------------------------------------------------------- !
 rt_t run_client_ipv4tcp()
 {
+    socklen_t sklen; // Temp for socket options setting
+    ssize_t bytes2send;
     char *packet;
     int rsk;
-    ssize_t bytes2send;
 
     rsk = socket(env.rpeer.sa_family, SOCK_STREAM, 0); // Create socket IPv4/TCP (SOCK_STREAM) // AF_UNSPEC
     if (rsk < 0)
@@ -293,39 +313,25 @@ rt_t run_client_ipv4tcp()
     // Retries............
     if (connect(rsk, (struct sockaddr *)&env.remote, sizeof(env.rpeer)) < 0) // (https://man7.org/linux/man-pages/man2/connect.2.html)
     {
-        pverbose("ipv4tcp: socket connection error [%d]\n!", errno); // error EAGAIN or EWOULDBLOCK.
+        pverbose("ipv4tcp: socket connection error  %d : %s\n", errno, strerror(errno));
         close(rsk);
         return (rtErr);
     }
 
     pverbose("ipv4tcp: Tester client at loopback [%s:%d]\n", inet_ntoa(env.remote.sin_addr), env.port);
 
-    // Packet length settings (socket MSS negotiation !!!)
-    size_t curr_mss = 536;
-    socklen_t len = sizeof(curr_mss);
-    /*
-    if (env.mss > 0) // Set mss
+    sklen = sizeof(env.mss);
+    if (getsockopt(rsk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, &sklen) == 0) // read payload size
     {
-        curr_mss = (size_t)env.mss;
-        if (getsockopt(rsk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &len) != 0) // set mss !!!!!!!!!!!!!
-        {
-            pverbose("ipv4tcp: negotited mss socket option (TCP_MAXSEG) error [%d] !\n", errno);
-        }
-    }
-
-    if (getsockopt(rsk, IPPROTO_TCP, TCP_MAXSEG, &curr_mss, &len) == 0)
-    {
-        pverbose("ipv4tcp: packet payload (mss) %d [bytes] !\n", curr_mss);
+        pverbose("ipv4tcp: negotited packet's payload size (mss) %d [bytes] !\n", env.mss);
     }
     else
     {
-        pverbose("ipv4tcp: negotited mss socket option (TCP_MAXSEG) error [%d] !\n", errno);
+        pverbose("ipv4tcp: get socket option (TCP_MAXSEG) fault [%d] !\n", errno);
+        env.mss = IPV4_DEF_MSS;
+        pverbose("ipv4tcp: uses payload size (mss): %.0f \n", env.mss);
     }
-
-    */
-
-    vars.pktpayload = 536;
-    pverbose("ipv4tcp: use mss: %.0f \n", vars.pktpayload);
+    vars.pktpayload = env.mss;
 
     if (vars.pktpayload >= vars.blocksize) /// computes number of packets will be sended and protocol efficiency
     {
@@ -333,7 +339,7 @@ rt_t run_client_ipv4tcp()
     }
     else
     {
-        vars.pktstosend = trunc(vars.blocksize / vars.pktpayload) + (long)vars.blocksize % curr_mss;
+        vars.pktstosend = trunc(vars.blocksize / vars.pktpayload) + (long)vars.blocksize % env.mss;
     }
     vars.pktefficiency = vars.pktpayload / (vars.pktpayload + vars.pktheader) * 100.0;
 
@@ -342,12 +348,69 @@ rt_t run_client_ipv4tcp()
         report_capacity(info, vars, _OUTS_CSV_HEADER);
     }
 
-    // ------------- allocates a packet's size buffer
+    // allocates a packets buffer
     const size_t buffersize = (size_t)(PACKET_BUFFER_MAX_SIZE); // (vars.pktpayload + vars.pktheader);
     packet = (char *)malloc(buffersize);
     memset(packet, 'A', buffersize);
     // report_capacity(info, vars, _OUTS_SUMMARY);
 
+    // --- BEGIN: DATA-BLOCK
+    vars.tstcounter = 0;
+    ssize_t sent;
+    while (vars.tstcounter++ < env.repeat_n) // Performs one or many tests...
+    {
+        vars.pktssent = 0;
+        bytes2send = (ssize_t)vars.blocksize;
+
+        vars.totaltime = now_millis();
+
+        while (bytes2send > 0)
+        {
+            if (bytes2send >= env.mss)
+            {
+                sent = send(rsk, packet, env.mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
+            }
+            else
+            {
+                sent = send(rsk, packet, (size_t)bytes2send, 0);
+            }
+            if (sent < 0)
+            {
+                pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
+            }
+            else
+            {
+                pverbose("ipv4tcp: sended %d \n", sent);
+                bytes2send -= sent;
+                vars.pktssent++;
+                bytes2send -= sent;
+                vars.datasent +=sent;
+            }
+        }
+
+        // Update result vars
+        vars.totaltime = (now_millis() - vars.totaltime); // ms VERIFICARE !!!!!!!!!!!
+        
+        vars.throughput = _Byte2Megabits(vars.datasent) / (vars.totaltime * 1000); // [Mbps]
+        vars.bandwidth = 0;                                                        // [Mbps]
+        vars.saturation = 0;                                                       // [Mbps]
+        vars.jitter = 0;
+
+        if (env._ocsv) // Outputs test results
+        {
+            report_capacity(info, vars, _OUTS_CSV_ROW);
+        }
+        else
+        {
+            report_capacity(info, vars, _OUTS_SUMMARY);
+        }
+    }
+    close(rsk);
+    free(packet);
+    // --- END: DATA-BLOCK
+
+    /*
+    // --- BEGIN: TIME-WINDOWED
     vars.tstcounter = 0;
     ssize_t sent;
     while (vars.tstcounter++ < env.repeat_n) // Performs one or many tests...
@@ -369,10 +432,14 @@ rt_t run_client_ipv4tcp()
             }
             if (sent < 0)
             {
-                pverbose("ipv4tcp: socket closed  %d \n", sent);
+                pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
             }
-            bytes2send -= sent;
-            vars.pktssent++;
+            else
+            {
+                pverbose("ipv4tcp: sended %d \n", sent);
+                bytes2send -= sent;
+                vars.pktssent++;
+            }
         }
 
         // Update result vars
@@ -394,7 +461,8 @@ rt_t run_client_ipv4tcp()
     }
     close(rsk);
     free(packet);
-    // -------
+    // --- END: TIME-WINDOWED
+    */
 
     return rtOk;
 }

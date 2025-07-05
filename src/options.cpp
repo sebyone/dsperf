@@ -48,11 +48,11 @@ typedef enum {
 typedef option_t[_N_OPTIONS] options_t, *poptions_t;
 */
 
-#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:Vh:w:g:p:o:x:l"
+#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:vVhw:g:p:o:x:l"
 
 const static option _LONG_OPTIONS[] = { // (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
-    {"help", no_argument, NULL, 0},
-    {"capacity", no_argument, NULL, 1},
+    {"help", no_argument, 0, 0},
+    {"capacity", no_argument, 0, 1},
     {"features", no_argument, 0, 2},
     {"security", no_argument, 0, 3},
     {"continuity", no_argument, 0, 4},
@@ -63,7 +63,7 @@ const static option _LONG_OPTIONS[] = { // (https://www.gnu.org/software/libc/ma
 // -------------------------------------------------------------------------------------------------------- !
 // Parser (syntax checking)
 // -------------------------------------------------------------------------------------------------------- !
-rt_t parser_args(int argc, char *argv[]) // Syntax validations
+rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
 {
 
     int option;
@@ -90,7 +90,8 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
         switch (option)
         {
         case 0: // --help
-            option = 'h';
+            print_help();
+            return rtExit;
             break;
         case 1: // --capacity
             Options.model_class = __Capacity;
@@ -114,12 +115,12 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
             break;
 
         case 'h':
-            print_usage();
+            print_help();
             return rtExit;
             break;
 
         case 'k': // Disable all system's messages
-        case 'l': // Show local interfaces for protocol
+        case 'l': // Scans system for interfaces and supported protocols
         case 'g': // Disable all system's messages
             pverbose("parser:  unsupported options '%s' ! \n", option);
             return rtErr;
@@ -128,7 +129,7 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
         case 'V': // Enables messages for the looping server events
             Options.pktverbose = true;
             break;
-            
+
         case 'x': // Enables concurrent connections
             Options.multilink = atoi(optarg);
             if (Options.multilink < 1)
@@ -141,7 +142,7 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
             Options.bandwidth = atol(optarg);
             if (Options.bandwidth < 1)
             {
-                pverbose("parser: repetitions must be >= 1\n");
+                pverbose("parser: bandwidth '-w' must be followed by speed in [MB/s] >= 1\n");
                 return rtErr;
             }
             break;
@@ -246,7 +247,7 @@ rt_t parser_args(int argc, char *argv[]) // Syntax validations
                 return rtErr;
             }
             else
-                Options.pkt_payload = tmplong;
+                Options.pkt_payload_size = tmplong;
             break;
 
         case 'f':
@@ -292,24 +293,24 @@ void print_help()
     printf("\nGeneral options\n");
     printf("  -v                                Show dsperf details and exit\n");
     printf("  -h,--help                         Show usage informations\n");
-    printf("  -l                                Lists local interface (require protocol specifications)\n");
+    printf("  -l                                Lists local interfaces (require protocol specification)\n");
     printf("  -g                                Disable all system's messages\n");
     printf("  -w <bandwidth>                    Sets reference to a nominal speed [Mbps] (bandwidth)\n");
-    printf("  -x                                Enable to use concurrent connections \n");
     printf("  -p <service>                      Sets service number (port inipv4) \n");
     //
     printf("\nRun mode");
     printf("  -S <local_addr>:<service>         Starts loopback server mode (if omitted uses default service/port)\n");
     printf("  -s <remote_addr>:<service>        Starts as client to test on loopback \n");
-    printf("  -i <local_interface/driver>       Forces to use a specific hardware interface (use -l to list availables)\n");
     printf("  -n <repetitions>                  Repeats test\n");
     printf("  -t <period>                       Continuosly testing for time period in [seconds] (max 8h)\n");
+    printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
+    printf("  -c <n_pkts>                       Generates traffic trasferring number of packets with payload size fixed (use '-p')\n");
     printf("  -V                                Enable messages for the looping server events\n");
     //
     printf("\nTraffic generator\n");
-    printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
-    printf("  -c <count>                        Generates traffic trasferring number of packets with payload size fixed (use '-p')\n");
     printf("  -o <bytes>                        Packet's payload size in bytes (tries to negotiate payload)\n");
+    printf("  -i <local_interface/driver>       Forces to use a specific interface (use -l to list interfaces)\n");
+    printf("  -x <n_threads>                    Enable to use concurrent connections \n");
     //
     printf("\nProtocol and Model\n");
     printf("  --ipv4                            Uses IPv4/TCP underlay network (RFCs 790-791)\n");
@@ -329,13 +330,18 @@ void print_help()
     printf("\n");
 }
 
+void print_license()
+{
+    printf("License MPL v.2.0 <https://mozilla.org/MPL/2.0/>\n");
+    printf("This Software is provided under this License on an 'as is' basis, without warranty of any kind.\n");
+    printf("This disclaimer of warranty constitutes an essential part of this License.\n");
+}
+
 void print_credits()
 {
     printf("\ndsperf  %d.%d.%d\n", PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR, PROJECT_VERSION_PATCH);
     printf("2024-2025 (@) Sebyone Srl\n");
-    printf("License MPL v.2.0 <https://mozilla.org/MPL/2.0/>\n");
-    printf("This Software is provided under this License on an 'as is' basis, without warranty of any kind.\n");
-    printf("This disclaimer of warranty constitutes an essential part of this License.\n");
+    print_license();
     printf("\n");
 }
 
@@ -344,9 +350,9 @@ void print_usage() // const char *prog_name
     const char *prog_name = "dsperf";
     printf("Usage:\n");
     printf("\n");
-    printf("  server Loopback: %s -S <local_ip:port> --ipv4 | --daas -V\n", prog_name);
+    printf("  server Loopback: %s -S <local_ip:port> [ --ipv4 | --daas ]  -V\n", prog_name);
     printf("\n");
-    printf("  client Tester:  %s -s <server_ip:port> [-b <blocksize> | -p <packet-size> -c <count> ] -n <repetitions>  [ --ipv4 | --daas ]  \n", prog_name);
+    printf("  client Tester:  %s -s <server_ip:port> [-b <blocksize> | -c <n_pkts> ] -p <pkt-payload-size> -n <repetitions>  [ --ipv4 | --daas ]   \n", prog_name);
     printf("\n");
 }
 
@@ -365,8 +371,8 @@ void clearOptions()
     Options.tst_pkts_num = 0;      // Testing for a lot of packet
     Options.multilink = 0;         // enable to use concurrent connections
     // Class: Caqpacity
-    Options.pkt_payload = 0; // Packet payload size
-    Options.bandwidth = 0;   // set reference to nominal speed [Mbps]
+    Options.pkt_payload_size = 0; // Packet payload size
+    Options.bandwidth = 0;        // set reference to nominal speed [Mbps]
 
     // Addressing
     Options.local_hwif_str[0] = '\0'; // Local interface to bind

@@ -14,7 +14,7 @@ extern options_t Options; // options.h
 // -------------------------------------------------------------------------------------------------------- !
 // Validator (semanthic checking)
 // -------------------------------------------------------------------------------------------------------- !
-rt_t validate_model_options(func_ptr *_pfrun)
+rt_t validate_options2model(func_ptr *_pfrun)
 {
     bool valid;
 
@@ -58,7 +58,7 @@ rt_t validate_model_options(func_ptr *_pfrun)
     if (Options.model_class == __unsetted) // default model 'capacity' !
     {
         Options.model_class == __Capacity;
-        pverbose("validator: model to default (Capacity) \n");
+        pverbose("validator: default model: Capacity \n");
     }
 
     switch (Options.model_protocol)
@@ -78,7 +78,7 @@ rt_t validate_model_options(func_ptr *_pfrun)
         else // _ROLE_CLIENT
         {
             valid = (strlen(Options.remote_addr) > 0);                                                                // remote_addr
-            valid = valid && ((Options.tst_block_size > 0) || (Options.tst_pkts_num > 0 && Options.pkt_payload > 0)); // blocksize OR pkt_num AND pkt_size
+            valid = valid && ((Options.tst_block_size > 0) || (Options.tst_pkts_num > 0 && Options.pkt_payload_size > 0)); // blocksize OR pkt_num AND pkt_size
 
             if (!valid) // Client error !
             {

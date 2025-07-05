@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef HARDWARE_H
-#define HARDWARE_H
+#ifndef SYSTEM_H
+#define SYSTEM_H
 
 #pragma once
 
@@ -63,4 +63,4 @@ $ ethtool eth0
 
 rt_t ipv4tcp_bandwidth(int ifn, long dband);
 
-#endif // HARDWARE_H
+#endif // SYSTEM_H

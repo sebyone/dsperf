@@ -7,24 +7,24 @@
  * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
  * Disclaimer of Warrant
- * Covered Software is provided under this License on an "as is" basis, without warranty of any kind, either
- * expressed, implied, or statutory, including, without limitation, warranties that the Covered  Software is
+ * Covered Software is  provided under this  License  on an "as is" basis, without  warranty of any kind, either
+ * expressed,  implied, or  statutory, including, without  limitation,  warranties that the Covered  Software is
  * free of defects, merchantable, fit for a particular purpose or non-infringing.
- * The entire risk as to the quality and performance of the Covered Software is with You.  Should any Covered
+ * The entire risk  as to the  quality and  performance of the Covered Software is with You.  Should any Covered
  * Software prove defective in any respect, You (not any Contributor) assume the cost of any necessary
  * servicing, repair, or correction.
- * This disclaimer of warranty constitutes an essential part of this License.  No use of any Covered Software
+ * This  disclaimer of  warranty  constitutes an essential part of this License.  No use of any Covered Software
  * is authorized under this License except under this disclaimer.
  *
  * Limitation of Liability
  * Under no circumstances and under no legal theory, whether tort (including negligence), contract, or otherwise,
- * shall any Contributor, or anyone who distributes Covered Software as permitted above, be liable to You for
- * any direct, indirect, special, incidental, or consequential damages of any character including, without
- * limitation, damages for lost profits, loss of goodwill, work stoppage, computer failure or malfunction,
- * or any and all other commercial damages or losses, even if such party shall have been informed of the
- * possibility of such damages.  This limitation of liability shall not apply to liability for death or personal
+ * shall  any  Contributor, or  anyone who  distributes Covered Software as permitted above, be liable to You for
+ * any  direct,  indirect,  special, incidental, or consequential  damages  of any  character  including, without
+ * limitation,  damages  for  lost profits,  loss of goodwill, work stoppage, computer failure or malfunction, or
+ * any and all other commercial damages or losses, even if such party shall have been informed of the
+ * possibility of such damages.  This limitation of liability  shall not apply to liability for death or personal
  * injury resulting from such party's negligence to the extent applicable law prohibits such limitation.
- * Some jurisdictions do not allow the exclusion or limitation of incidental or consequential damages, so this
+ * Some  jurisdictions  do not  allow the exclusion or limitation of incidental or consequential damages, so this
  * exclusion and limitation may not apply to You.
  *
  * Contributors:
@@ -32,15 +32,13 @@
  * sebastiano.meduri@gmail.com  - initial design, implementation and documentation
  *
  */
-
-#include "signal.h"
 #include "version.h"
 #include "globals.h"
 #include "options.h"
 #include "validator.h"
+#include "signal.h"
 
-// Signal handler function
-void signal_handler(int signum)
+void signal_handler(int signum) // Signal handler function
 {
     if (signum == SIGINT)
     {
@@ -61,32 +59,32 @@ void signal_handler(int signum)
 
 int main(int argc, char *argv[])
 {
-    func_ptr *frun;
+    func_ptr *runTester;
     print_credits();
 
-    // Set signal handler for SIGINT (Ctrl+C)
-    if (signal(SIGINT, signal_handler) == SIG_ERR)
+    if (signal(SIGINT, signal_handler) == SIG_ERR) // Set signal handler for SIGINT (Ctrl+C)
     {
         perror("Failed to set signal handler for SIGINT");
         return 1;
     }
 
-    // Set signal handler for SIGTERM (termination)
-    if (signal(SIGTERM, signal_handler) == SIG_ERR)
+    if (signal(SIGTERM, signal_handler) == SIG_ERR) // Set signal handler for SIGTERM (termination)
     {
         perror("Failed to set signal handler for SIGTERM");
         return 1;
     }
 
-    rt_t pcheck = parser_args(argc, argv); // parsing arguments
+    rt_t pcheck = parse_args2options(argc, argv); // parsing arguments
     if (pcheck != rtOk)
     {
         return pcheck;
     }
-    pcheck = validate_model_options(frun); // validate parsed options values
+
+    pcheck = validate_options2model(runTester); // validate parsed options values
     if (pcheck != rtOk)
     {
         return pcheck;
     }
-    return ((*frun)()); // uses chosed model_protocol and role
+
+    return ((*runTester)()); // uses chosed protocol,evaluation model,testing mode and host role
 }

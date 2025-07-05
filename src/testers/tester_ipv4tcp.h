@@ -153,6 +153,7 @@
 
 #define IPV4_MIN_MSS 256
 #define IPV4_MAX_MSS 1460
+#define IPV4_DEF_MSS 536
 
 #define IPV4_MIN_SPORT 0
 #define IPV4_MAX_SPORT 65535

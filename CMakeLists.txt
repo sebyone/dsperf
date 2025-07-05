@@ -12,7 +12,7 @@ message(STATUS "Compile: ${CMAKE_BUILD_TYPE}")
 
 # Options
 option(LIBDAAS_R019 "Enable support for Libdaas R019" OFF)
-message(STATUS "LIBDAAS_R019 = ${LIBDAAS_R019}")
+
 
 # Sources files
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -36,7 +36,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 if(CMAKE_BUILD_TYPE EQUAL "Debug")
-message(STATUS "set debug ")
+message(STATUS "set debug: -ggdb  ")
 endif()
 
 target_compile_options( ${TARGET} PRIVATE -Wall -Wextra -Wshadow -Wconversion -Wsign-conversion -Wunused-parameter -Wno-long-long -pedantic -ggdb )
@@ -55,6 +55,39 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(STATUS "32bit")
 endif()
+
+
+# Links libdaas
+if(LIBDAAS_R019)
+    #message(STATUS "Compiling WITH libdaas")
+    message(STATUS "LIBDAAS_R019 = ${LIBDAAS_R019}")
+    if(EXISTS "${INC_DIR}/daas.hpp" AND EXISTS "${INC_DIR}/daas_types.hpp")
+        list(APPEND HDR_FILES
+            ${INC_DIR}/daas.hpp
+            ${INC_DIR}/daas_types.hpp
+        )
+        target_compile_definitions(dperf PRIVATE "LIBDAAS_R019")
+        target_include_directories(dperf PRIVATE ${INC_DIR})
+        target_link_libraries(dperf PRIVATE ${LIB_DIR}/libdaas.a)
+    else()
+        message(FATAL_ERROR "Can't find LIBDAAS in ${INC_DIR}")
+    endif()
+else()
+    message(STATUS "Compiling without LIBDAAS.")
+endif()
+
+# System's libraries
+
+#target_link_libraries(
+   # dsperf
+   #PRIVATE pthread
+   #PRIVATE bluetooth
+#)
+
+#add_custom_command(TARGET myTarget POST_BUILD
+#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE1}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
+#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE2}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
+#)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
@@ -76,40 +109,6 @@ endif()
 #install( TARGETS ${TARGET} RUNTIME DESTINATION )
 #Link from installed packages
 #target_link_libraries( phone software hardware )
-
-
-# Links libdaas
-if(LIBDAAS_R019)
-    #message(STATUS "Compiling WITH libdaas")
-    if(EXISTS "${INC_DIR}/daas.hpp" AND EXISTS "${INC_DIR}/daas_types.hpp")
-        list(APPEND HDR_FILES
-            ${INC_DIR}/daas.hpp
-            ${INC_DIR}/daas_types.hpp
-        )
-        target_compile_definitions(dperf PRIVATE "LIBDAAS_R019")
-        target_include_directories(dperf PRIVATE ${INC_DIR})
-        target_link_libraries(dperf PRIVATE ${LIB_DIR}/libdaas.a)
-    else()
-        message(FATAL_ERROR "Can't find libdaas in ${INC_DIR}")
-    endif()
-else()
-    message(STATUS "Compiling without libdaas.")
-endif()
-
-# System's libraries
-
-#target_link_libraries(
-   # dsperf
-   #PRIVATE pthread
-   #PRIVATE bluetooth
-#)
-
-#add_custom_command(TARGET myTarget POST_BUILD
-#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE1}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
-#                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${IMAGE2}" "${CMAKE_BINARY_DIR}/bin/$<CONFIG>/"
-#)
-
-
 
 
 

@@ -45,7 +45,7 @@ typedef struct
     long tst_pkts_num;                     // generate traffic by number of pkts (requires pkt_payload)
                                            //
                                            //  _____Tester parmaters
-    int pkt_payload;                       // pkt's payload size (needs to be supported in testing routine)
+    int pkt_payload_size;                       // pkt's payload size (needs to be supported in testing routine)
     int multilink;                         // enable to use concurrent connections
                                            //
                                            // ______Capacity
@@ -72,10 +72,11 @@ typedef struct
 
 #pragma once
 
+void print_license();
 void print_credits();
 void print_usage();
 void print_help();
 
-rt_t parser_args(int argc, char *argv[]);
+rt_t parse_args2options(int argc, char *argv[]);
 
 #endif // OPTIONS_H
