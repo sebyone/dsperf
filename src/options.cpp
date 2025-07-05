@@ -48,7 +48,7 @@ typedef enum {
 typedef option_t[_N_OPTIONS] options_t, *poptions_t;
 */
 
-#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:V:h:w:g:p:o:x:l"
+#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:v:Vh:w:g:p:o:x:l"
 
 const static option _LONG_OPTIONS[] = { // (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
     {"help", no_argument, NULL, 0},

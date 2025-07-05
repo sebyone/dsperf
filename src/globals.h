@@ -23,9 +23,9 @@
 
 #pragma once
 
-// Config
+// -------------------------------------------------Config
 #undef LIBDAAS_V19
-#define DEBUG
+#undef DEBUG
 #define VERBOSE
 
 #include "helpers/utils.h"

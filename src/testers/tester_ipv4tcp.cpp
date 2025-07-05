@@ -63,7 +63,7 @@ void setDefaultEnv()
 {
     memset(&env, 0, sizeof(env));
     // env.mode = _ROLE_NONE;               // run mode
-    env.repeat_n = 0;                       // run counter
+    env.repeat_n = 1;                       // run counter
     env.port = IPV4_DEF_SPORT;              // default service port
     env.local_hwif = 0;                     // uses specified hardware
     env.local.sin_family = AF_INET;         // IP family
@@ -104,6 +104,7 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
         pverbose("ipv4tcp: uses default service port: '%d' !\n", env.port);
     }
 
+    // env.repeat_n
     env.local.sin_port = htons(env.port); // Service
     env.remote.sin_port = htons(env.port);
 
@@ -342,13 +343,14 @@ rt_t run_client_ipv4tcp()
     }
 
     // ------------- allocates a packet's size buffer
-    const size_t buffersize = (size_t)(2048); // (vars.pktpayload + vars.pktheader);
+    const size_t buffersize = (size_t)(PACKET_BUFFER_MAX_SIZE); // (vars.pktpayload + vars.pktheader);
     packet = (char *)malloc(buffersize);
     memset(packet, 'A', buffersize);
+    // report_capacity(info, vars, _OUTS_SUMMARY);
 
     vars.tstcounter = 0;
     ssize_t sent;
-    while (vars.tstcounter++ <= env.repeat_n) // Performs one or many tests...
+    while (vars.tstcounter++ < env.repeat_n) // Performs one or many tests...
     {
         vars.pktssent = 0;
         bytes2send = (ssize_t)vars.blocksize;
@@ -365,6 +367,10 @@ rt_t run_client_ipv4tcp()
             {
                 sent = send(rsk, packet, (size_t)bytes2send, 0);
             }
+            if (sent < 0)
+            {
+                pverbose("ipv4tcp: socket closed  %d \n", sent);
+            }
             bytes2send -= sent;
             vars.pktssent++;
         }
@@ -373,6 +379,9 @@ rt_t run_client_ipv4tcp()
         vars.totaltime = (now_millis() - vars.totaltime); // ms VERIFICARE !!!!!!!!!!!
         vars.datasent = vars.blocksize - bytes2send;
         vars.throughput = _Byte2Megabits(vars.datasent) / (vars.totaltime * 1000); // [Mbps]
+        vars.bandwidth = 0;                                                        // [Mbps]
+        vars.saturation = 0;                                                       // [Mbps]
+        vars.jitter = 0;
 
         if (env._ocsv) // Outputs test results
         {

@@ -18,7 +18,7 @@ rt_t validate_model_options(func_ptr *_pfrun)
 {
     bool valid;
 
-#if (1) // DEBUG
+#ifdef DEBUG // 
     pverbose("DEBUG OPTIONS:\n");
     pverbose("Options.model_protocol = %d \n", Options.model_protocol); // Test protocol (IPV4, DAAS, etc.etc.)
     pverbose("Options.model_class = %d \n", Options.model_class);       // Test class (Features, Capacity, etc.etc.)

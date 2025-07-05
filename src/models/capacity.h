@@ -67,14 +67,17 @@ typedef struct // Model vars Capacity test
                           //
     double setuptime;     // 12. Total links management time  [ms]
     double totaltime;     // 12. Total elapsed test time [ms]
-                          //
-    double bandwidth;     // set reference to nominal speed [Mbps]
+    double triptime;      // time send-receive_ack
     double jitter;        // 11. Pkt Err.[%]
-                          //
     double throughput;    // 13. Throughput [Mbps]
-                          //
-    double tsterrors;     // 11.
-                          //
+    double bandwidth;     // set reference to nominal speed [Mbps]
+    double saturation;    // Bandwidth saturation %
+
+    //
+
+    //
+    double tsterrors; // 11.
+                      //
 } capacity_vars_t;
 
 // ------------------------------------------------------------------------------------------------------------------------------!

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(dperf VERSION 0.1.03 LANGUAGES C CXX)
+project(dperf VERSION 0.0.52 LANGUAGES C CXX)
 
 # Version Header
 configure_file(
