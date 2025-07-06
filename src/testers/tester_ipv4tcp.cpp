@@ -1,7 +1,7 @@
 
 #include "tester_ipv4tcp.h"
 
-#if defined(__linux__) || defined(__RASP__) || defined(__MINGW64__)
+#if defined(__linux__) || defined(__RASP__)
 
 #include <unistd.h>      // Posix API ( fopen, close etc.etc. )
 #include <sys/ioctl.h>   // does not declare the ioctl function on some platforms: AIX 5.1, Solaris 11.4, Haiku 2017
@@ -11,6 +11,8 @@
 #include <netinet/tcp.h> // defines macros for use as a socket option
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+#elif defined(__MINGW64__)
 
 #elif defined(__windows__)
 
@@ -48,8 +50,8 @@ static struct // Specific ipv4 parameters
     short int port;      // IPv4 Port
     sockaddr_in local;   // server mode local hwif/IP
     sockaddr rpeer;      // connected remote
-    int local_hwif;      // local Interface !!!!!!!!!!!!!!!!!!
     sockaddr_in remote;  // Client mode only
+    int local_hwif;      // local Interface !!!!!!!!!!!!!!!!!!
     ssize_t mss;         // mss size
     double bandwidth_if; // retrieved from hardware IF
     ssize_t block_size;
@@ -89,8 +91,8 @@ void setDefaultEnv()
 // -------------------------------------------------------------------------------------------------------- !
 rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 {
-    resetVars(vars); // Reset Tester vars and Enviroment
-    setDefaultEnv();
+    resetVars(vars); // Result variables
+    setDefaultEnv(); // Tester parameters (enviroment)
 
     if (ops_.service_num > 0) // Check range and Set IPv4 port number
     {
@@ -205,8 +207,8 @@ rt_t run_server_ipv4tcp()
         pverbose("ipv4tcp: socket option (SO_REUSEADDR) fault [%d]\n!", errno);
     }
 
-    struct timeval tv; // TIMEOUT_MS 30 Secs Timeout
-    tv.tv_usec = 30;
+    struct timeval tv; //  Timeout in seconds
+    tv.tv_usec = IPV4_RCVTIMEO_SEC;
     if (setsockopt(local_sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) // set timer for recv_socket
     {
         pverbose("ipv4tcp: socket option (SO_RCVTIMEO) fault  [%d] !\n", errno);
@@ -250,6 +252,7 @@ rt_t run_server_ipv4tcp()
             recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
             if (recvd < 0)
             {
+                // recvd timeouts 30 !!!!
                 pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
                 break;
             }
@@ -260,6 +263,17 @@ rt_t run_server_ipv4tcp()
             }
             total_recv_data += recvd;
 
+#if defined(IPV4_PKT_FRISBEE)
+            if (buffer[0] == 'F' && buffer[1] == 'S' && buffer[2] == 'B' && buffer[3] == 'E' && buffer[4] == 'E' && buffer[5] == '>')
+            {
+                buffer[5] == '<';
+                if (send(remote_sk, buffer, recvd, 0) < 0)
+                {
+                    pverbose("ipv4tcp: socket send data error  #%d %s\n", errno, strerror(errno)); // errors ?
+                    break;
+                }
+            }
+#endif
             if (env._opkts)
             {
                 // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
@@ -352,7 +366,27 @@ rt_t run_client_ipv4tcp()
     const size_t buffersize = (size_t)(PACKET_BUFFER_MAX_SIZE); // (vars.pktpayload + vars.pktheader);
     packet = (char *)malloc(buffersize);
     memset(packet, 'A', buffersize);
-    // report_capacity(info, vars, _OUTS_SUMMARY);
+
+#if defined(IPV4_PKT_FRISBEE)
+    struct timeval tv; //  Timeout in seconds
+    tv.tv_usec = IPV4_RCVTIMEO_SEC;
+    if (setsockopt(local_sk, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) // set timer for recv_socket
+    {
+        pverbose("ipv4tcp: socket option (SO_RCVTIMEO) fault  [%d] !\n", errno);
+    }
+
+    // Frisbee packet ;
+    packet[0] = 'F';
+    packet[1] = 'S';
+    packet[2] = 'B';
+    packet[3] = 'E';
+    packet[4] = 'E';
+    packet[5] = '>';
+    ssize_t recvd = 0;
+    ssize_t total_recv_pkts = 0;
+    ssize_t total_recv_data = 0;
+    double pkt_send_time;
+#endif
 
     // --- BEGIN: DATA-BLOCK
     vars.tstcounter = 0;
@@ -380,17 +414,43 @@ rt_t run_client_ipv4tcp()
             }
             else
             {
+#if defined(IPV4_PKT_FRISBEE)
+                pkt_send_time = now_millis();
+#endif
                 pverbose("ipv4tcp: sended %d \n", sent);
                 bytes2send -= sent;
                 vars.pktssent++;
                 bytes2send -= sent;
-                vars.datasent +=sent;
+                vars.datasent += sent;
             }
-        }
 
+#if defined(IPV4_PKT_FRISBEE)
+            recvd = recv(rsk, packet, sizeof(packet), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
+            if (recvd < 0)
+            {
+                // recvd timeouts !!!!
+                pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
+                break;
+            }
+            else
+            {
+                if (packet[1] == 'S' && packet[3] == 'E' && packet[5] == '<')
+                {
+                    pkt_send_time = (now_millis() - pkt_send_time);
+                    vars.triptime = (vars.triptime + pkt_send_time) / 2.0;
+                    vars.jitter = (vars.jitter + (pkt_send_time - vars.triptime)) / 2.0;
+                    vars.latyency += (pkt_send_time / 2.0); // Total
+                    vars.pktsrcvd++;
+                    total_recv_pkts++;
+                    total_recv_data += recvd;
+                    packet[5] = '>';
+                }
+            }
+#endif
+        }
         // Update result vars
         vars.totaltime = (now_millis() - vars.totaltime); // ms VERIFICARE !!!!!!!!!!!
-        
+
         vars.throughput = _Byte2Megabits(vars.datasent) / (vars.totaltime * 1000); // [Mbps]
         vars.bandwidth = 0;                                                        // [Mbps]
         vars.saturation = 0;                                                       // [Mbps]

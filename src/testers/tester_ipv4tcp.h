@@ -4,13 +4,14 @@
  * File: tester_ipv4tcp.h
  *
  * Licence
- * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
- * If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ * This Source Code Form  is subject to the terms of the Mozilla Public License, v. 2.0.
+ * You can obtain a copy of the MPL License at https://mozilla.org/MPL/2.0/.
  * Disclaimer of Warrant
- * Covered Software is provided under this License on an "as is" basis, without warranty of any kind.
- * The entire risk as to the quality and performance of the Covered Software is with You.
- * This disclaimer of warranty constitutes an essential part of this License.
- * No use of any Covered Software is authorized under this License except under this disclaimer.
+ * Covered Software is provided under this License on an "as is" basis, without warranty
+ * of any kind.The entire risk as to the quality and performance of the Covered Software
+ * is  with You.  This  disclaimer  of  warranty  constitutes  an essential part of this 
+ * License. No use of any Covered Software is authorized under this License except under 
+ * this disclaimer.
  *
  * Contributors:
  * plogiacco@smartlab.it - initial design, implementation and documentation
@@ -37,7 +38,7 @@
     -----+---------------------------------------+----------
       1	  Internet Control Message Protocol	      ICMP
       2	  Internet Group Management Protocol	    IGMP
-      6	  Transmission Control Protocol	          TCP
+      6	  Transmission Control Protocol	          TCP <-----
      17	  User Datagram Protocol	                UDP
      41	  IPv6 encapsulation	                    ENCAP
      89	  Open Shortest Path First	              OSPF
@@ -158,6 +159,9 @@
 #define IPV4_MIN_SPORT 0
 #define IPV4_MAX_SPORT 65535
 #define IPV4_DEF_SPORT 3001
+
+#undef IPV4_PKT_FRISBEE
+#define IPV4_RCVTIMEO_SEC 30
 
 rt_t set_env_ipv4tcp(options_t &ops_); // set default Options values for model
 rt_t run_server_ipv4tcp();             // start loopback server

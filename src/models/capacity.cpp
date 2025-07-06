@@ -62,6 +62,7 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
         printf("    Efficiency:     %.2f [%%]\n", vars_.pktefficiency);
         printf("    Pkts to send:   %.0f\n", vars_.pktstosend); // numero pacchetti da inviare
         printf("    Pkts sent:      %.0f\n", vars_.pktssent);   // numero pacchetti inviati
+        printf("    Pkts received:  %.0f\n", vars_.pktsrcvd);   // numero pacchetti ricevuti
         printf("    Pkts loss:      %.0f\n", vars_.pktsloss);   //
         printf("    Data to send:   %.3f [MB]\n", _Byte2Megabyte(vars_.blocksize));
         printf("    Data Sent:      %.0f [Bytes]\n", vars_.datasent); // Mega bytes
@@ -70,12 +71,13 @@ rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_i
         printf("    Set-up time:    %.2f [ms]\n", vars_.setuptime);
         printf("    Trip time:      %.2f [ms]\n", vars_.triptime);
         printf("    Total time:     %.2f [ms]\n", vars_.totaltime);
-        printf("    Jitter:         %.2f [%]\n", (vars_.jitter));
+        printf("    Jitter:         %.2f [%%]\n", (vars_.jitter));
+        printf("    Latency:        %.2f [%%]\n", (vars_.latyency));
         printf("    Throughput:     %.2f [Mbps]\n", vars_.throughput);
         printf("                    %.2f [MB/s]\n", vars_.throughput / 8.0);
         printf("                    %.2f [pps]\n", (vars_.totaltime * 1000.0) / vars_.pktssent);
         printf("    Bandwidth:      %.2f [Mbps]\n", vars_.bandwidth);
-        printf("    Saturation:     %.2f [%]\n", (vars_.saturation));
+        printf("    Saturation:     %.2f [%%]\n", (vars_.saturation));
         printf("\n");
         break;
     }
