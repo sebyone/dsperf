@@ -75,6 +75,8 @@ rt_t validate_options2model(func_ptr *_pfrun)
         pverbose("validator: default model: Capacity \n");
     }
 
+    // Choose tester and executes
+
     switch (Options.model_protocol)
     {
     case _PROTO_IPV4:
@@ -101,7 +103,13 @@ rt_t validate_options2model(func_ptr *_pfrun)
                 print_help();
                 return rtErr;
             }
+
+            // repeats test repeat_n
+
             *_pfrun = run_client_ipv4tcp; // bandwidth
+
+
+
         };
         return set_env_ipv4tcp(Options);
         break;

@@ -371,17 +371,16 @@ rt_t run_server_ipv4tcp()
         }
         pverbose("ipv4tcp: open connection remote_ip [%s] \n", inet_ntoa(*(struct in_addr *)&env.rpeer)); // inet_ntoa() ??? inet_ntoa(((struct sockaddr_in *)iifa->ifa_addr)->sin_addr)
 
-        // TODO: implement test protocol like fresbee !
+        // TODO: Multi-threading______________________
         total_recv_data = 0;
         total_recv_pkts = 0;
 
         start = now_millis();
         while (1) // TODO: until testing_time-out or connection closed !!!!!!!!!!!!!
         {
-            recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
+            recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // recv timeout 30s, MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
             if (recvd < 0)
             {
-                // recvd timeouts 30 !!!!
                 pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
                 break;
             }
@@ -395,7 +394,7 @@ rt_t run_server_ipv4tcp()
 #if defined(IPV4_PKT_FRISBEE)
             if (buffer[1] == 'S' && buffer[2] == 'B' && buffer[4] == 'E' && buffer[5] == '>')
             {
-                pverbose("frisbee received");
+                pverbose("ipv4tcp: sends back frisbee packet \n");
                 buffer[5] = '<';
                 if (send(remote_sk, buffer, recvd, 0) < 0)
                 {
@@ -406,15 +405,14 @@ rt_t run_server_ipv4tcp()
 #endif
             if (env._opkts)
             {
+                pverbose("rcvd pkt n. #%d - payload %d [bytes] \n", total_recv_pkts, recvd);
                 // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
-                pverbose("recvd pkt #%d - data size %d [bytes] \n", total_recv_pkts, recvd);
                 // printf(buffer);
                 // printf("\n");
             }
         }
         elapsed = now_millis() - start;
-
-        throughput = (elapsed > 0) ? (_Bytes2Megabits(total_recv_data) / (elapsed * 1000.0)) : 0;
+        throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(total_recv_data), elapsed) : 0;
         close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
         pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
     }
@@ -454,37 +452,22 @@ rt_t run_client_ipv4tcp()
     pverbose("ipv4tcp: uses remote_ip loopback at [%s:%d]\n", inet_ntoa(env.remote_ip.sin_addr), env.port);
 
     // -- MSS - TCP layer (OSI layer 4)
-    /*
-    if (env.mtu > 0) // Tries to set
-    {
-        if (setsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, sizeof(env.mss)) != 0)
-        {
-            pverbose("ipv4tcp: can't set MSS!");
-            return (rtErr);
-        }
-    }
 
-    // Tries to negotiate mss
-    if (send(local_sk, packet, (size_t)bytes2send, MSG_CONFIRM) < 0)
+    if (env.mss == 0)
     {
-        pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
+        env.mss = IPV4_DEF_MSS;
     }
-    */
+    if (setsockopt(remote_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, sizeof(env.mss)) != 0) // set payload size
+    {
+        pverbose("ipv4tcp: can't set MSS!");
+        return (rtErr);
+    }
+    pverbose("ipv4tcp: uses packet's payload size MSS:  %.0ld  [bytes] !\n", env.mss);
+
     env.mtu = IPV4_DEF_MTU;
 
-    sklen = sizeof(env.mss);
-    if (getsockopt(remote_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, &sklen) == 0) // read payload size
-    {
-        pverbose("ipv4tcp: uses packet's payload size MSS: %d [bytes] !\n", env.mss);
-    }
-    else
-    {
-        pverbose("ipv4tcp: get socket option (TCP_MAXSEG) fault [%d] !\n", errno);
-        env.mss = IPV4_DEF_MSS;
-        pverbose("ipv4tcp: uses payload size (mss): %.0ld \n", env.mss);
-    }
-
     resetVars(vars); // Result variables
+
     vars.blocksize = (double)env.block_size;
     vars.timeslot = (double)env.timeslot; // timed mode
     vars.bandwidth = env.if_bandwidth;    // Reference to bandwidth !!!!!!!
@@ -522,161 +505,122 @@ rt_t run_client_ipv4tcp()
     ssize_t total_recv_data = 0;
     double pkt_rtrip_time;
 #endif
-    int tstcounter = 0;
+
     ssize_t sent;
     ssize_t total_sent_pkts;
     ssize_t total_sent_data;
 
     // --- BEGIN: TEST BY DATA-BLOCK
+    /*
+    int tstcounter = 0;
     while (tstcounter++ < env.repeat_n) // Performs one or many tests...
     {
-        bytes2send = env.block_size;
-        total_sent_pkts = 0;
-        total_sent_data = 0;
+    */
+    bytes2send = env.block_size;
+    total_sent_pkts = 0;
+    total_sent_data = 0;
 
-        vars.trasftime = now_millis();
+    vars.trasftime = now_millis();
 
-        while (bytes2send > 0)
+    while (bytes2send > 0)
+    {
+        if (bytes2send >= env.mss)
         {
-            if (bytes2send >= env.mss)
-            {
-                sent = send(remote_sk, packet, env.mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
-            }
-            else
-            {
-                sent = send(remote_sk, packet, (size_t)bytes2send, 0);
-            }
-            if (sent < 0)
-            {
-                pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
-            }
-            else
-            {
-
-#if defined(IPV4_PKT_FRISBEE)
-                pkt_rtrip_time = now_millis();
-#endif
-                pverbose("ipv4tcp: sended %ld \n", sent);
-                bytes2send -= sent;
-                total_sent_pkts++;
-                total_sent_data += sent;
-            }
-
-#if defined(IPV4_PKT_FRISBEE)
-            recvd = recv(remote_sk, packet, sizeof(packet), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
-            if (recvd < 0)
-            {
-                // recvd timeouts !!!!
-                pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
-                break;
-            }
-            else
-            {
-                if (packet[1] == 'S' && packet[3] == 'E' && packet[5] == '<')
-                {
-                    pkt_rtrip_time = (now_millis() - pkt_rtrip_time);
-                    vars.rtriptime = (vars.rtriptime + pkt_rtrip_time) / 2.0;
-                    vars.jitter = (vars.jitter + (pkt_rtrip_time - vars.rtriptime)) / 2.0;
-                    vars.latyency += (pkt_rtrip_time / 2.0); // Total
-                    vars.pktsrcvd++;
-                    total_recv_pkts++;
-                    total_recv_data += recvd;
-                    packet[5] = '>';
-                }
-            }
-#endif
-        }
-        // Update vars
-        vars.trasftime = (now_millis() - vars.trasftime); // ms VERIFICARE !!!!!!!!!!!
-        vars.tstcounter = tstcounter;
-        vars.pktssent = (double)total_sent_pkts;
-        vars.datasent += (double)total_sent_data;
-
-#if defined(IPV4_PKT_FRISBEE)
-        vars.pktsrcvd = (double)total_recv_pkts;
-        vars.datarcvd = (double)total_recv_data;
-        vars.dataloss = vars.pktssent - vars.pktsrcvd;
-        vars.pktsloss = vars.datasent - vars.datarcvd;
-        vars.tsterrors = 1.0 - (vars.pktsrcvd / vars.pktssent) * -100.0;
-#endif
-
-        vars.throughput = _Bytes2Megabits(vars.datasent) / (vars.trasftime * 1000); // [Mbps]
-        vars.bandwidth = 0;                                                         // [Mbps]
-        vars.saturation = 0;                                                        // [Mbps]
-        vars.jitter = abs(vars.jitter);
-
-        vars.pktpayload = (double)env.mss;
-        vars.pktheader = (double)(env.mtu - env.mss);
-        vars.pktefficiency = vars.pktpayload / (vars.pktpayload + vars.pktheader) * 100.0;
-
-        if (env._ocsv) // Outputs test results
-        {
-            report_capacity(&info, &vars, _OUTS_CSV_ROW);
+            sent = send(remote_sk, packet, env.mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
         }
         else
         {
-            report_capacity(&info, &vars, _OUTS_SUMMARY);
+            sent = send(remote_sk, packet, (size_t)bytes2send, 0);
         }
+        if (sent < 0)
+        {
+            pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
+        }
+        else
+        {
+
+#if defined(IPV4_PKT_FRISBEE)
+            pkt_rtrip_time = now_millis();
+#endif
+            pverbose("ipv4tcp: sended %ld \n", sent);
+            bytes2send -= sent;
+            total_sent_pkts++;
+            total_sent_data += sent;
+        }
+
+#if defined(IPV4_PKT_FRISBEE)
+        recvd = recv(remote_sk, packet, sizeof(packet), 0); // MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
+        if (recvd < 0)
+        {
+            // recvd timeouts !!!!
+            pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
+            break;
+        }
+        else
+        {
+            if (packet[1] == 'S' && packet[3] == 'E' && packet[5] == '<')
+            {
+                pkt_rtrip_time = (now_millis() - pkt_rtrip_time);
+                vars.rtriptime = (vars.rtriptime + pkt_rtrip_time) / 2.0;
+                vars.jitter = (vars.jitter + (pkt_rtrip_time - vars.rtriptime)) / 2.0;
+                vars.latyency += (pkt_rtrip_time / 2.0); // Total
+                vars.pktsrcvd++;
+                total_recv_pkts++;
+                total_recv_data += recvd;
+                packet[5] = '>';
+            }
+        }
+#endif
     }
+    // Update vars
+    vars.trasftime = (now_millis() - vars.trasftime); // Computes elapsed time !
+
+    sklen = sizeof(env.mss);
+    if (getsockopt(remote_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, &sklen) == 0) // read back payload size
+    {
+        // if (env.mss != readed....
+        pverbose("ipv4tcp: gets payload size MSS: %.0ld [bytes] !\n", env.mss);
+    }
+
+    /*
+    vars.tstcounter = tstcounter;
+    */
+
+    vars.pktssent = (double)total_sent_pkts;
+    vars.datasent += (double)total_sent_data;
+
+#if defined(IPV4_PKT_FRISBEE)
+    vars.pktsrcvd = (double)total_recv_pkts;
+    vars.datarcvd = (double)total_recv_data;
+    vars.dataloss = vars.datasent - vars.datarcvd;
+    vars.pktsloss = vars.pktssent - vars.pktsrcvd;
+    vars.tsterrors = 1.0 - (vars.pktsrcvd / vars.pktssent) * -100.0;
+#endif
+
+    vars.throughput = __THROUGHPUT(_Bytes2Megabits(vars.datasent), vars.trasftime); // [Mbps]
+    vars.bandwidth = 0;                                                             // [Mbps]
+    vars.saturation = 0;                                                            // [Mbps]
+    vars.jitter = abs(vars.jitter);
+
+    vars.pktpayload = (double)env.mss;
+    vars.pktheader = (double)(env.mtu - env.mss);
+    vars.pktefficiency = vars.pktpayload / (vars.pktpayload + vars.pktheader) * 100.0;
+
+    if (env._ocsv) // Outputs test results
+    {
+        report_capacity(&info, &vars, _OUTS_CSV_ROW);
+    }
+    else
+    {
+        report_capacity(&info, &vars, _OUTS_SUMMARY);
+    }
+    /*
+}
+    */
     close(remote_sk);
     free(packet);
 
     // --- END: DATA-BLOCK
-
-    /*
-    // --- BEGIN: TIME-WINDOWED
-    vars.tstcounter = 0;
-    ssize_t sent;
-    while (vars.tstcounter++ < env.repeat_n) // Performs one or many tests...
-    {
-        vars.pktssent = 0;
-        bytes2send = (ssize_t)vars.blocksize;
-
-        vars.trasftime = now_millis();
-
-        while (bytes2send > 0)
-        {
-            if (bytes2send >= curr_mss)
-            {
-                sent = send(local_sk, packet, curr_mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
-            }
-            else
-            {
-                sent = send(local_sk, packet, (size_t)bytes2send, 0);
-            }
-            if (sent < 0)
-            {
-                pverbose("ipv4tcp: socket connection error  #%d %s\n", errno, strerror(errno)); // error EAGAIN or EWOULDBLOCK.
-            }
-            else
-            {
-                pverbose("ipv4tcp: sended %d \n", sent);
-                bytes2send -= sent;
-                vars.pktssent++;
-            }
-        }
-
-        // Update result vars
-        vars.trasftime = (now_millis() - vars.trasftime); // ms VERIFICARE !!!!!!!!!!!
-        vars.datasent = vars.blocksize - bytes2send;
-        vars.throughput = _Byte2Megabits(vars.datasent) / (vars.totaltime * 1000); // [Mbps]
-        vars.bandwidth = 0;                                                        // [Mbps]
-        vars.saturation = 0;                                                       // [Mbps]
-        vars.jitter = 0;
-
-        if (env._ocsv) // Outputs test results
-        {
-            report_capacity(info, vars, _OUTS_CSV_ROW);
-        }
-        else
-        {
-            report_capacity(info, vars, _OUTS_SUMMARY);
-        }
-    }
-    close(local_sk);
-    free(packet);
-    // --- END: TIME-WINDOWED
-    */
 
     return rtOk;
 }

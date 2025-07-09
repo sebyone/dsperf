@@ -93,6 +93,11 @@ typedef enum
     _OUTS_RAW_LINE,
 } report_item_t;
 
+
+
+
+#define __THROUGHPUT(mbs,mls) mbs/mls/1000.0
+
 // ------------------------------------------------------------------------------------------------------------------------------!
 /*
 class ITesterModel // Abstract test model_protocol

@@ -90,7 +90,7 @@ rt_t report_capacity(const model_info_t *info_, capacity_vars_t *vars_, report_i
         printf("    Latency:        %.3f [ms]\n", (vars_->latyency));
         printf("    Throughput:     %.2f [Mbps]\n", vars_->throughput);
         printf("                    %.2f [MB/s]\n", vars_->throughput / 8.0);
-        printf("                    %.2f [pps]\n", (vars_->trasftime * 1000.0) / vars_->pktssent);
+        printf("                    %.2f [pps]\n", (vars_->trasftime / 1000.0) / vars_->pktssent);
         printf("    Saturation:     %.2f [%%]\n", (vars_->saturation));
         printf("\n");
         break;
