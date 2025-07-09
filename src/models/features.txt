@@ -1,0 +1,23 @@
+
+TCP provides a reliable, stream-oriented, full-duplex connection between two sockets on top of ip(7), for both v4 and v6 versions. 
+TCP guarantees that the data arrives in order and retransmits lost packets. 
+TCP generates and checks a per-packet checksum to catch transmission errors. 
+TCP does not preserve record boundaries. 
+TCP is built on top of IP,and the address formats defined by ip(7) apply to TCP.
+TCP only supports point-to-point communication; broadcasting and multicasting are not supported.
+
+
+
+TCP supports urgent data. 
+Urgent data is used to signal the receiver that some important message is part of the data stream and that it should be processed as soon as possible. 
+To send urgent data specify the MSG_OOB option to send(2). 
+
+
+RFC 2001 the NewReno and SACK extensions.
+
+RFC 1323 TCP high performance extensions. 
+These include Protection Against Wrapped Sequence Numbers (PAWS), Window Scaling and Timestamps. 
+Window scaling allows the use of large (> 64K) TCP windows in order to support links with high latency or bandwidth.
+To make use of them, the send and receive buffer sizes must be increased. 
+
+

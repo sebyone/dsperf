@@ -40,6 +40,7 @@ typedef enum // Supported Protocols
   _PROTO_BTHX      // Bluetooth LLC/MAC
 } nproto_t;
 
+
 typedef enum // Roles
 {
   _ROLE_NONE = 0, // Undefined

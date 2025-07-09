@@ -27,7 +27,7 @@ Latency refers to the delay in data transmission, while .
 
 #pragma once
 #include <stdlib.h>
-#include <vector>
+// #include <vector>
 
 #include "../models.h"
 
@@ -46,8 +46,11 @@ typedef struct // Model vars Capacity test
     double pktheader;     //  5. Header [bytes]
     double pktpayload;    //  4. Payload size [bytes]
     double pktefficiency; //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
+    double pktmtu;        //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
+    double fragmentation; //  6. Packets fragmentation
                           //
     double datasent;      // 10. Traffic data sent [MB]
+    double datarcvd;      //  8. Pkt received
     double dataloss;      //  9. Traffic loss  = pktssent - pktstosend
                           //
     double pktssent;      //  8. Pkt sent       - counter of packet really sended ( check socket buffering settings !!!!!!!)
@@ -55,8 +58,8 @@ typedef struct // Model vars Capacity test
     double pktsloss;      //  9. Pkt loss  = pktssent - pktstosend     - ???????????????????????
                           //
     double setuptime;     // 12. Total links management time  [ms]
-    double totaltime;     // 12. Total elapsed test time [ms]
-    double triptime;      // Time to send-receive_ack
+    double trasftime;     // 12. Total elapsed test time [ms]
+    double rtriptime;     // Time to send-receive_ack
                           //
     double throughput;    // 13. Throughput [Mbps]
     double bandwidth;     // set reference to nominal speed [Mbps]
@@ -73,6 +76,6 @@ typedef struct // Model vars Capacity test
 
 // ------------------------------------------------------------------------------------------------------------------------------!
 rt_t resetVars(capacity_vars_t &_cvars);
-rt_t report_capacity(const model_info_t &info_, capacity_vars_t &vars_, report_item_t switch_);
+rt_t report_capacity(const model_info_t *info_, capacity_vars_t *vars_, report_item_t switch_);
 
 #endif // MODEL_CAPACITY_H

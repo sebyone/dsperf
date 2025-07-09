@@ -6,6 +6,8 @@
 #include "options.h"
 #include "validator.h"
 
+#include "system.h"
+
 #include "testers/tester_ipv4tcp.h"
 #include "testers/tester_daasfrs.h"
 //
@@ -18,7 +20,7 @@ rt_t validate_options2model(func_ptr *_pfrun)
 {
     bool valid;
 
-#ifdef DEBUG // 
+#ifdef DEBUG //
     pverbose("DEBUG OPTIONS:\n");
     pverbose("Options.model_protocol = %d \n", Options.model_protocol); // Test protocol (IPV4, DAAS, etc.etc.)
     pverbose("Options.model_class = %d \n", Options.model_class);       // Test class (Features, Capacity, etc.etc.)
@@ -41,12 +43,24 @@ rt_t validate_options2model(func_ptr *_pfrun)
     pverbose("Options.csv_path[0]  = %s\n", Options.csv_path);        // output file (default 'stdout')
 
     pverbose("Addressing\n");
-    pverbose("Options.local_hwif_str = %s\n", Options.local_hwif_str); // Local interface to bind
-    pverbose("Options.local_addr  = %s\n", Options.local_addr);        // Local interface and address
-    pverbose("Options.remote_addr  = %s\n", Options.remote_addr);      // Remote address to connect (used in client mode only)
-    pverbose("Options.service_str  = %s\n", Options.service_str);      // Service identifier (port for ipv4 stack)
-    pverbose("Options.service_num  = %d\n", Options.service_num);      // Service identifier (port for ipv4 stack)
-#endif                                                                 // DEBUG
+    pverbose("Options.local_if_str = %s\n", Options.local_if_str); // Local interface to bind
+    pverbose("Options.local_addr  = %s\n", Options.local_addr);    // Local interface and address
+    pverbose("Options.remote_addr  = %s\n", Options.remote_addr);  // Remote address to connect (used in client mode only)
+    pverbose("Options.service_str  = %s\n", Options.service_str);  // Service identifier (port for ipv4 stack)
+    pverbose("Options.service_num  = %d\n", Options.service_num);  // Service identifier (port for ipv4 stack)
+#endif                                                             // DEBUG
+
+    if (Options.listinterfaces) // And PROTOCOL
+    {
+        return list_interfaces2();
+    }
+
+    if (Options.pkt_mtu_size > 0 && Options.pkt_payload_size > 0) // Invad MTU/PAYLOaD
+    {
+        pverbose("validator: set MTU and PAYLOAD alternately !\n");
+        print_usage();
+        return rtErr;
+    }
 
     if (Options.model_protocol == _PROTO_NONE || Options.run_mode == _ROLE_NONE) // Invad PROTO or ROLE !
     {
@@ -57,19 +71,20 @@ rt_t validate_options2model(func_ptr *_pfrun)
 
     if (Options.model_class == __unsetted) // default model 'capacity' !
     {
-        Options.model_class == __Capacity;
+        Options.model_class = __Capacity;
         pverbose("validator: default model: Capacity \n");
     }
 
     switch (Options.model_protocol)
     {
     case _PROTO_IPV4:
+        pverbose("validator: uses tester 'IPV4TCP'\n");
         if (Options.run_mode == _ROLE_SERVER)
         {
             valid = (strlen(Options.local_addr) > 0);
             if (!valid) // Server error !
             {
-                pverbose("validator: too few parameters to run Loopback server !\n");
+                pverbose("validator: invalid parameters to run Loopback server !\n");
                 print_help();
                 return rtErr;
             }
@@ -77,12 +92,12 @@ rt_t validate_options2model(func_ptr *_pfrun)
         }
         else // _ROLE_CLIENT
         {
-            valid = (strlen(Options.remote_addr) > 0);                                                                // remote_addr
+            valid = (strlen(Options.remote_addr) > 0);                                                                     // remote_addr
             valid = valid && ((Options.tst_block_size > 0) || (Options.tst_pkts_num > 0 && Options.pkt_payload_size > 0)); // blocksize OR pkt_num AND pkt_size
 
             if (!valid) // Client error !
             {
-                pverbose("validator: too few parameters to run Tester Client !\n");
+                pverbose("validator: invalid parameters to run Tester !\n");
                 print_help();
                 return rtErr;
             }

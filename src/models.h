@@ -9,8 +9,8 @@
  * Disclaimer of Warrant
  * Covered Software is provided under this License on an "as is" basis, without warranty
  * of any kind.The entire risk as to the quality and performance of the Covered Software
- * is  with You.  This  disclaimer  of  warranty  constitutes  an essential part of this 
- * License. No use of any Covered Software is authorized under this License except under 
+ * is  with You.  This  disclaimer  of  warranty  constitutes  an essential part of this
+ * License. No use of any Covered Software is authorized under this License except under
  * this disclaimer.
  *
  * Contributors:
@@ -56,25 +56,30 @@ IEEE 802.21     MIH (Media Independent Handoff) / DaaS
 
 #pragma once
 #include <stdlib.h>
-#include <vector>
+// #include <vector>
 
 #include "globals.h"
 
-typedef enum // Testing Models
+typedef enum // Testing models
 {
     __unsetted = 0,
     __Capacity,     // throughtput: data quantity/transfer time (traffic generator),  % = throughtput / nominal bandwidth
     __Capabilities, // compliance with features matrix
     __Availability, // service continuity in time windows
     __Security      // security asserts test: data sniffing, peer shadow identity
-} tclass_t;
+} tmodel_t;
+
+#define __MODELNAME(x) (x == __Capacity) ? "Capacity" : (x == __Capabilities) ? "Capabilities" \
+                                                    : (x == __Availability)   ? "Avalability"  \
+                                                    : (x == __Security)       ? "Security"     \
+                                                                              : "Undefined"
 
 typedef struct
 {
-    nproto_t nproto;   // Protocol
-    tclass_t tclass;   // Model
-    unsigned testerid; // Variant
-    const char *title;
+    nproto_t nproto; // Protocol
+    tmodel_t tmodel; // Model
+    unsigned compid; // Variant
+    const char *name;
     const char *info;
     const char *team;
 } model_info_t, *pmodel_info_t;
@@ -84,8 +89,9 @@ typedef enum
     _OUTS_CSV_HEADER = 1, // header
     _OUTS_CSV_ROW,        // simple line
     _OUTS_SUMMARY,
+    _OUTS_RAW_INFO,
+    _OUTS_RAW_LINE,
 } report_item_t;
-
 
 // ------------------------------------------------------------------------------------------------------------------------------!
 /*

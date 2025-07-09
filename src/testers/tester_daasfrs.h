@@ -58,9 +58,9 @@ ret_t set_env_daasfrs(options_t &ops_);  // set default Options values for model
 
 // ret_t set_env_ipv4tcp(netif_t &nif_); // updates interface paraeters
 
-ret_t run_server_daasfrs(tclass_t tcls); // start loopback server
+ret_t run_server_daasfrs(tmodel_t tcls); // start loopback server
 
-ret_t run_client_daasfrs(tclass_t tcls); // performs test
+ret_t run_client_daasfrs(tmodel_t tcls); // performs test
 
 #endif // WITH_DAAS
 #endif // MODEL_DAASFRS_H

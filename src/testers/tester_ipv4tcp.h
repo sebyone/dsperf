@@ -9,8 +9,8 @@
  * Disclaimer of Warrant
  * Covered Software is provided under this License on an "as is" basis, without warranty
  * of any kind.The entire risk as to the quality and performance of the Covered Software
- * is  with You.  This  disclaimer  of  warranty  constitutes  an essential part of this 
- * License. No use of any Covered Software is authorized under this License except under 
+ * is  with You.  This  disclaimer  of  warranty  constitutes  an essential part of this
+ * License. No use of any Covered Software is authorized under this License except under
  * this disclaimer.
  *
  * Contributors:
@@ -21,7 +21,7 @@
 
 /*  dsperf tester routine
     ------------------------------------------
-          title: "IPv4/TCP"
+          name: "IPv4/TCP"
           specs: "Throughput/Bandwidth v.01a"
          author: "developers@sebyone.it"
        protocol: _PROTO_IPV4,
@@ -32,28 +32,26 @@
     Overview
     --------
     Trasmission Capacity Tester routine for Transmission Control Protocol (6-TCP)
-    Sends a block of data to remote server and print out all test results.
+    Sends a block of data to remote_ip server and print out all test results.
 
-    Protocol and subs as defined in IETF RFCs 790-791
+    IPv4 Protocol as defined in IETF RFCs 790-791
     -----+---------------------------------------+----------
       1	  Internet Control Message Protocol	      ICMP
       2	  Internet Group Management Protocol	    IGMP
-      6	  Transmission Control Protocol	          TCP <-----
+      6	  Transmission Control Protocol	          TCP ==> RFC 793, RFC 1122 and RFC 2001
      17	  User Datagram Protocol	                UDP
      41	  IPv6 encapsulation	                    ENCAP
      89	  Open Shortest Path First	              OSPF
     132	  Stream Control Transmission Protocol	  SCTP
 
-
-    Network stack implementation:
-    ------------------------------
-
-    Linux: https://man7.org/linux/man-pages/man7/socket.7.html   (BSD Posix socket) 
-
+    IPv4 Network stack
+    ------------------
+    Linux: https://man7.org/linux/man-pages/man7/socket.7.html   (BSD Posix socket)
     Microsoft (Winsock):
+*/
 
-    
-    AF_INET is è la famiglia di indirizzi per IPv4:
+/*
+    IPv4 address family type AF_INET:
     -----------------------------------------------
       SOCK_STREAM -Supporta la comunicazione di flusso di byte orientata alla connessione affidabile.
       SOCK_DGRAM - Supporta le comunicazioni datagrammi non affidabili.
@@ -140,7 +138,7 @@
                       *) Host byte order refers to the way a specific computer architecture stores multi-byte data (like
                       integers) in memory,  while network byte order is a standardized big-endian format used in network
                       communication to ensure consistent data interpretation across different systems.
-     ----------------------------------------------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------------------------------------    
 */
 
 #ifndef MODEL_IPV4TCP_H
@@ -149,22 +147,44 @@
 #include "../models/capacity.h"
 #include "../options.h"
 
-// ipv4_tcp defines
+// ipv4_tcp settings
 #define PACKET_BUFFER_MAX_SIZE 2048
 
 #define IPV4_MIN_MSS 256
 #define IPV4_MAX_MSS 1460
 #define IPV4_DEF_MSS 536
 
+#define IPV4_MIN_MTU 256
+#define IPV4_MAX_MTU 3000
+#define IPV4_DEF_MTU 1500
+//
+#define IPV4_PKT_HEADER_SIZE 20
+#define IPV4_GRE_HEADER_SIZE 4
+#define IPV4_TCP_HEADER_SIZE 20
+//
+#define ETHERNET_HEADER_SIZE 14
+#define ETHERNET_FCS_SIZE 4
+
 #define IPV4_MIN_SPORT 0
 #define IPV4_MAX_SPORT 65535
 #define IPV4_DEF_SPORT 3001
 
-#undef IPV4_PKT_FRISBEE
+#define IPV4_PKT_FRISBEE
 #define IPV4_RCVTIMEO_SEC 30
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+//rt_t sktoption(int sk_, int op_, int &val_);
 rt_t set_env_ipv4tcp(options_t &ops_); // set default Options values for model
 rt_t run_server_ipv4tcp();             // start loopback server
 rt_t run_client_ipv4tcp();             // performs test
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MODEL_IPV4TCP_H

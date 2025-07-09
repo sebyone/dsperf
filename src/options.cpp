@@ -48,7 +48,7 @@ typedef enum {
 typedef option_t[_N_OPTIONS] options_t, *poptions_t;
 */
 
-#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:vVhw:g:p:o:x:l"
+#define _SHORT_OPTIONS "S:s:b:n:i:c:m:f:t:y:vVhw:g:p:x:l"
 
 const static option _LONG_OPTIONS[] = { // (https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Option-Example.html)
     {"help", no_argument, 0, 0},
@@ -71,6 +71,7 @@ rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
     char *psep = NULL;
     size_t tmpsize;
     long tmplong;
+    int tmpint;
 
     if (argc < 2)
     {
@@ -120,10 +121,13 @@ rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
             break;
 
         case 'k': // Disable all system's messages
-        case 'l': // Scans system for interfaces and supported protocols
         case 'g': // Disable all system's messages
             pverbose("parser:  unsupported options '%s' ! \n", option);
             return rtErr;
+            break;
+
+        case 'l': // Scans system for interfaces and supported protocols
+            Options.listinterfaces = true;
             break;
 
         case 'V': // Enables messages for the looping server events
@@ -194,7 +198,9 @@ rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
             break;
 
         case 'i': // Forces to use a specific hardware interface
-            pverbose(" '%s' unsupported options ! \n", option);
+            // pverbose(" '%s' unsupported options ! \n", option);
+            tmpsize = strlen(optarg);
+            strncpy(Options.local_if_str, optarg, tmpsize);
             return rtErr;
             break;
 
@@ -239,19 +245,33 @@ rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
                 Options.tst_pkts_num = (double)tmplong;
             break;
 
-        case 'o': // Packet's payload size in bytes
-            tmplong = atol(optarg);
-            if (tmplong < 1)
+        case 'm': // Protocol MTU size in bytes
+            tmpint = atoi(optarg);
+            if (tmpint < 1)
             {
-                pverbose("parser: packet's payload size must be > 0\n");
+                pverbose("parser: MTU size must be > 0\n");
                 return rtErr;
             }
             else
-                Options.pkt_payload_size = tmplong;
+                // Options.pkt_payload_size = tmplong;
+                Options.pkt_mtu_size = tmpint;
+            break;
+
+        case 'o': // Packet's PAYLOAD size in bytes
+            tmpint = atoi(optarg);
+            if (tmpint < 1)
+            {
+                pverbose("parser: packet payload size must be > 0\n");
+                return rtErr;
+            }
+            else
+                Options.pkt_payload_size = tmpint;
+
             break;
 
         case 'f':
             Options.csv_enabled = true;
+            tmpsize = strlen(optarg);
             strncpy(Options.csv_path, optarg, sizeof(Options.csv_path) - 1);
             break;
 
@@ -293,10 +313,11 @@ void print_help()
     printf("\nGeneral options\n");
     printf("  -v                                Show dsperf details and exit\n");
     printf("  -h,--help                         Show usage informations\n");
-    printf("  -l                                Lists local interfaces (require protocol specification)\n");
     printf("  -g                                Disable all system's messages\n");
     printf("  -w <bandwidth>                    Sets reference to a nominal speed [Mbps] (bandwidth)\n");
-    printf("  -p <service>                      Sets service number (port inipv4) \n");
+    printf("  -p <service>                      Sets service number (sub-protocol) \n");
+    printf("  -l                                Lists local interfaces (require protocol specification)\n");
+    printf("  -i <interface>                    Forces to use a specific interface e/o driver (use -l to list)\n");
     //
     printf("\nRun mode");
     printf("  -S <local_addr>:<service>         Starts loopback server mode (if omitted uses default service/port)\n");
@@ -304,13 +325,14 @@ void print_help()
     printf("  -n <repetitions>                  Repeats test\n");
     printf("  -t <period>                       Continuosly testing for time period in [seconds] (max 8h)\n");
     printf("  -b <bytes>                        Generates traffic trasferring data-block sized in bytes\n");
-    printf("  -c <n_pkts>                       Generates traffic trasferring number of packets with payload size fixed (use '-p')\n");
+    printf("  -c <n_pkts>                       Generates traffic trasferring number of packets with payload size fixed (use '-o')\n");
     printf("  -V                                Enable messages for the looping server events\n");
     //
     printf("\nTraffic generator\n");
-    printf("  -o <bytes>                        Packet's payload size in bytes (tries to negotiate payload)\n");
-    printf("  -i <local_interface/driver>       Forces to use a specific interface (use -l to list interfaces)\n");
+    printf("  -m <mtu_size>                     Protocol MTU size in bytes\n");
+    printf("  -o <payload_size>                 Packet payload size in bytes\n");
     printf("  -x <n_threads>                    Enable to use concurrent connections \n");
+
     //
     printf("\nProtocol and Model\n");
     printf("  --ipv4                            Uses IPv4/TCP underlay network (RFCs 790-791)\n");
@@ -375,15 +397,16 @@ void clearOptions()
     Options.bandwidth = 0;        // set reference to nominal speed [Mbps]
 
     // Addressing
-    Options.local_hwif_str[0] = '\0'; // Local interface to bind
-    Options.local_addr[0] = '\0';     // Local interface and address
-    Options.remote_addr[0] = '\0';    // Remote address to connect (used in client mode only)
-    Options.service_str[0] = '\0';    // Local interface and address
-    Options.service_num = 0;          // Service identifier (port for ipv4 stack)
+    Options.local_if_str[0] = '\0'; // Local interface to bind
+    Options.local_addr[0] = '\0';   // Local interface and address
+    // Options.remote_addr[0] = '\0';    // Remote address to connect (used in client mode only)
+    Options.service_str[0] = '\0'; // Local interface and address
+    Options.service_num = 0;       // Service identifier (port for ipv4 stack)
 
     // Formatting
     Options.csv_enabled = false;   // print out in csv format
     Options.csv_no_header = false; // print out csv columns header
     Options.csv_path[0] = '\0';    // output file (default 'stdout')
     Options.pktverbose = false;    // Packet verbose mode
+    Options.listinterfaces = false;
 }

@@ -24,9 +24,9 @@
 #define _1KB 2 ^ 10
 #define _1MB 2 ^ 20
 #define _1GB 2 ^ 30
-#define _Byte2Megabyte(b) ((double)(b) / (2 ^ 20))
-#define _Byte2Megabits(b) ((double)(b * 8) / (double)(2 ^ 20))
-#define _MegaByte2Megabits(b) ((long)(b * 8))
+#define _Bytes2Megabytes(b) ((b) / (double)(2 ^ 20))
+#define _Bytes2Megabits(b) ((b * 8.0) / (double)(2 ^ 20))
+#define _Megabytes2Megabits(b) ((b * 8.0))
 
 // Bitwise
 //
@@ -40,6 +40,5 @@
 #define bitClear(value, bit) ((value) &= ~(1UL << (bit)))
 #define bitWrite(value, bit, bitvalue) (bitvalue ? bitSet(value, bit) : bitClear(value, bit))
 #define pinToggle(pin) PINB ^= 1UL _BV()
-
 
 #endif // UTILS_H
