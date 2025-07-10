@@ -73,7 +73,6 @@ typedef enum // Testing models
                                                     : (x == __Availability)   ? "Avalability"  \
                                                     : (x == __Security)       ? "Security"     \
                                                                               : "Undefined"
-
 typedef struct
 {
     nproto_t nproto; // Protocol

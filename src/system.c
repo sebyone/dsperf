@@ -35,6 +35,10 @@
 
 #elif defined(__MINGW64__)
 
+#include <winsock.h>
+#include <winsock2.h>
+#include <sys/types.h>
+
 #elif defined(__windows__)
 
 #include <winsock.h>
