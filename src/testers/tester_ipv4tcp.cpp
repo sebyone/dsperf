@@ -34,6 +34,15 @@
 
 #elif defined(__MINGW64__)
 
+#include <sys/types.h>
+#include <winsock.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#define NI_MAXHOST 1025
+#define IF_NAMESIZE 16
+#define IFNAMSIZ IF_NAMESIZE
+
 #elif defined(__windows__)
 
 #include <sys/types.h>
@@ -404,7 +413,7 @@ rt_t run_client_ipv4tcp()
     socklen_t sklen; // Temp for socket options setting
     ssize_t bytes2send = 1;
     char *packet;
-    int remote_sk;
+    SOCKET remote_sk;
 
     remote_sk = socket(env.remote_ip.sin_family, SOCK_STREAM, IPPROTO_IP); // Create socket IPv4/TCP (SOCK_STREAM) // AF_UNSPEC
     if (remote_sk < 0)

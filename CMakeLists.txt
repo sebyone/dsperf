@@ -28,8 +28,8 @@ file( GLOB_RECURSE CPPS "${SRC_DIR}/*.cpp" "${SRC_DIR}/*.c" )
 add_executable(${TARGET} ${CPPS} ${HPPS} )
 
 # Standard C/C++
-set(CMAKE_CXX_FLAGS "-I c:/msys64/ucrt64/include") 
-set(CMAKE_C_FLAGS "-I c:/msys64/ucrt64/include") 
+set(CMAKE_CXX_FLAGS "-I c:/msys64/ucrt64/include -Ic:/msys64/include") 
+set(CMAKE_C_FLAGS "-I c:/msys64/ucrt64/include -Ic:/msys64/include") 
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)

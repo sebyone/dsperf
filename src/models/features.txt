@@ -21,3 +21,46 @@ Window scaling allows the use of large (> 64K) TCP windows in order to support l
 To make use of them, the send and receive buffer sizes must be increased. 
 
 
+
+TCP Maximum Segment Size tuning
+IBM, Last Updated: 2025-01-16
+
+The maximum size packets that TCP sends can have a major impact on bandwidth, because it is more efficient to send the largest possible packet size on the network.
+
+TCP controls this maximum size, known as Maximum Segment Size (MSS), for each TCP connection. 
+For direct-attached networks, TCP computes the MSS by using the MTU size of the network interface and then subtracting 
+the protocol headers to come up with the size of data in the TCP packet. 
+For example, Ethernet with a MTU of 1500 would result in a MSS of 1460 after subtracting 20 bytes for IPv4 header and
+20 bytes for TCP header.
+
+The TCP protocol includes a mechanism for both ends of a connection to advertise the MSS to be used over the connection 
+when the connection is created. Each end uses the OPTIONS field in the TCP header to advertise a proposed MSS. The MSS 
+that is chosen is the smaller of the values provided by the two ends. If one endpoint does not provide its MSS, then 
+536 bytes is assumed, which is bad for performance.
+
+The problem is that each TCP endpoint only knows the MTU of the network it is attached to.
+It does not know what the MTU size of other networks that might be between the two endpoints. So, TCP only knows the 
+correct MSS if both endpoints are on the same network. Therefore, TCP handles the advertising of MSS differently 
+depending on the network configuration, if it wants to avoid sending packets that might require IP fragmentation to go
+over smaller MTU networks.
+
+The value of MSS advertised by the TCP software during connection setup depends on whether the other end is a local 
+system on the same physical network (that is, the systems have the same network number) or whether it is on a different
+(remote) network.
+
+
+Hosts on the same network
+If the other end of the connection is on the same IP network, the MSS advertised by TCP is based on the MTU of the local network interface.
+
+Hosts on different networks
+When the other end of the connection is on a remote network, the operating system's TCP defaults to advertising an MSS that is determined with the method below.
+
+TCP path MTU discovery
+The TCP path MTU discovery protocol option is enabled by default in AIX. This option allows the protocol stack to determine the minimum MTU size on any network that is currently in the path between two hosts, and is controlled by the tcp_pmtu_discover=1 network option.
+
+Static routes
+You can override the default MSS value of 1460 bytes by specifying a static route to a specific remote network.
+Using the tcp_mssdflt option of the no command
+The tcp_mssdflt option is used to set the maximum packet size for communication with remote networks.
+Subnetting and the subnetsarelocal option of the no command
+You can use the subnetsarelocal option of the no command to control when TCP considers a remote endpoint to be local (on the same network) or remote.
