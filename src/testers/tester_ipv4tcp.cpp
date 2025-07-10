@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <math.h>
 
+#include <thread>
+
 #if defined(__linux__) || defined(__RASP__)
 
 #include <sys/types.h>  // defines a collection of typedef symbols and structures
@@ -238,13 +240,73 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 }
 
 // -------------------------------------------------------------------------------------------------------- !
+// GESTIONE CLIENT CONNESSO
+// -------------------------------------------------------------------------------------------------------- !
+void handle_incoming_connection(int remote_sk)
+{
+    // TODO: Multi-threading______________________
+    ssize_t recvd, total_recv_data, total_recv_pkts;
+    char *buffer;
+    double start, elapsed, throughput;
+
+    total_recv_data = 0;
+    total_recv_pkts = 0;
+    buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
+
+
+    pverbose("ipv4tcp: open connection remote_ip [%s] \n", inet_ntoa(*((struct in_addr *)&env.rpeer))); // inet_ntoa() ??? inet_ntoa(((struct sockaddr_in *)iifa->ifa_addr)->sin_addr)
+
+    start = now_millis();
+    while (1) // TODO: until testing_time-out or connection closed !!!!!!!!!!!!!
+    {
+        recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // recv timeout 30s, MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
+        if (recvd < 0)
+        {
+            pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
+            break;
+        }
+        total_recv_pkts++;
+        if (recvd == 0)
+        {
+            break;
+        }
+        total_recv_data += recvd;
+
+#if defined(IPV4_PKT_FRISBEE)
+        if (buffer[1] == 'S' && buffer[2] == 'B' && buffer[4] == 'E' && buffer[5] == '>')
+        {
+            pverbose("ipv4tcp: sends back frisbee packet \n");
+            buffer[5] = '<';
+            if (send(remote_sk, buffer, recvd, 0) < 0)
+            {
+                pverbose("ipv4tcp: socket send data error  #%d %s\n", errno, strerror(errno)); // errors ?
+                break;
+            }
+        }
+#endif
+        if (env._opkts)
+        {
+            pverbose("rcvd pkt n. #%d - payload %d [bytes] \n", total_recv_pkts, recvd);
+            // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
+            // printf(buffer);
+            // printf("\n");
+        }
+    }
+    elapsed = now_millis() - start;
+    throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(total_recv_data), elapsed) : 0;
+    close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
+    pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
+    free(buffer);
+    pverbose("thread killed....!\n");
+    return;
+}
+
+
+// -------------------------------------------------------------------------------------------------------- !
 // LOOPBACK SERVER
 // -------------------------------------------------------------------------------------------------------- !
 rt_t run_server_ipv4tcp()
 {
-    ssize_t recvd, total_recv_data, total_recv_pkts;
-    double start, elapsed, throughput;
-    char *buffer;
     int opt, remote_sk = 0;
     int local_sk = socket(env.local_ip.sin_family, SOCK_STREAM, 0);
 
@@ -368,7 +430,7 @@ rt_t run_server_ipv4tcp()
             ....
     */
 
-    buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
+    
     socklen_t rpeer_addr_len = sizeof(env.rpeer);
     while (1)
     {
@@ -378,55 +440,12 @@ rt_t run_server_ipv4tcp()
             pverbose("ipv4tcp: incoming connection from [%s] refused !\n", env.rpeer.sa_data);
             continue;
         }
-        pverbose("ipv4tcp: open connection remote_ip [%s] \n", inet_ntoa(*(struct in_addr *)&env.rpeer)); // inet_ntoa() ??? inet_ntoa(((struct sockaddr_in *)iifa->ifa_addr)->sin_addr)
-
-        // TODO: Multi-threading______________________
-        total_recv_data = 0;
-        total_recv_pkts = 0;
-
-        start = now_millis();
-        while (1) // TODO: until testing_time-out or connection closed !!!!!!!!!!!!!
-        {
-            recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // recv timeout 30s, MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
-            if (recvd < 0)
-            {
-                pverbose("ipv4tcp: socket read error  #%d %s\n", errno, strerror(errno)); // errors ?
-                break;
-            }
-            total_recv_pkts++;
-            if (recvd == 0)
-            {
-                break;
-            }
-            total_recv_data += recvd;
-
-#if defined(IPV4_PKT_FRISBEE)
-            if (buffer[1] == 'S' && buffer[2] == 'B' && buffer[4] == 'E' && buffer[5] == '>')
-            {
-                pverbose("ipv4tcp: sends back frisbee packet \n");
-                buffer[5] = '<';
-                if (send(remote_sk, buffer, recvd, 0) < 0)
-                {
-                    pverbose("ipv4tcp: socket send data error  #%d %s\n", errno, strerror(errno)); // errors ?
-                    break;
-                }
-            }
-#endif
-            if (env._opkts)
-            {
-                pverbose("rcvd pkt n. #%d - payload %d [bytes] \n", total_recv_pkts, recvd);
-                // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
-                // printf(buffer);
-                // printf("\n");
-            }
-        }
-        elapsed = now_millis() - start;
-        throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(total_recv_data), elapsed) : 0;
-        close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
-        pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
-    }
+        // Delego Thread per la gestione dell'handle del socket collegato
+        std::thread(handle_incoming_connection, remote_sk).detach();
+        pverbose("thread started....!\n");
+    }        
     shutdown(local_sk, 2); // 2 = stop both reception and transmission.
-    free(buffer);
+    
     // -----------
     return rtOk;
 }

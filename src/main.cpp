@@ -59,7 +59,7 @@ void signal_handler(int signum) // Signal handler function
 
 int main(int argc, char *argv[])
 {
-    func_ptr *runTester;
+    func_ptr runTester;
     print_credits();
 
     if (signal(SIGINT, signal_handler) == SIG_ERR) // Set signal handler for SIGINT (Ctrl+C)
@@ -80,11 +80,11 @@ int main(int argc, char *argv[])
         return pcheck;
     }
 
-    pcheck = validate_options2model(runTester); // validate parsed options values
+    pcheck = validate_options2model(&runTester); // validate parsed options values
     if (pcheck != rtOk)
     {
         return pcheck;
     }
 
-    return ((*runTester)()); // uses chosed protocol,evaluation model,testing mode and host role
+    return ((runTester)()); // uses chosed protocol,evaluation model,testing mode and host role
 }
