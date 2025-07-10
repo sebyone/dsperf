@@ -26,10 +26,11 @@
 
 #include <ifaddrs.h> // get interface by address
 #include <netdb.h>   // getnameinfo()
-
+/*
 #define NI_MAXHOST 1025
 #define IF_NAMESIZE 16
 #define IFNAMSIZ IF_NAMESIZE
+*/
 
 #elif defined(__MINGW64__)
 
@@ -61,16 +62,17 @@ static capacity_vars_t vars; // capacity_vars
 static struct // Specific ipv4 parameters
 {
     int repeat_n;                 // test repetittion
-    short int port;               // IPv4 Port
+    short unsigned int port;      // IPv4 Port
     struct sockaddr_in local_ip;  // server mode local_ip hwif/IP
     struct sockaddr rpeer;        // connected remote_ip
     struct sockaddr_in remote_ip; // Client mode only
     char local_if[IFNAMSIZ];      // local_ip Interface name !!!!!!!!!!!!!!!!!!
-    size_t mss;                   // mss size
-    size_t mtu;                   // mss size
-    size_t if_bandwidth;          // retrieved from hardware IF
-    size_t block_size;
-    size_t timeslot; // time to test
+    ssize_t mss;                  // mss size
+    ssize_t mtu;                  // mss size
+    ssize_t if_bandwidth;         // retrieved from hardware IF
+    ssize_t block_size;
+    ssize_t timeslot; // time to test
+    ssize_t pktstosend;
     //
     bool _ocsv;
     bool _ocsvheader;
@@ -111,30 +113,18 @@ void setDefaultEnv()
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-#include <stdint.h>
-
-uint32_t swap_endian_32(uint32_t num)
+rt_t getInterfaceByIP(char *ipaddr_, char *_ifname)
 {
-    return ((num >> 24) & 0xFFu) |      // Move byte 3 to byte 0
-           ((num << 8) & 0xFF0000u) |   // Move byte 1 to byte 2
-           ((num >> 8) & 0xFF00u) |     // Move byte 2 to byte 1
-           ((num << 24) & 0xFF000000u); // Move byte 0 to byte 3
-}
-// ------------------------
-rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
-{
-
-    setDefaultEnv(); // Tester parameters (enviroment)
-
     // ---------------- get Interface name by Address AF_INET (https://man7.org/linux/man-pages/man3/getifaddrs.3.html)
     struct ifaddrs *ifa, *iifa;
-    int rt;
-    if ((rt = getifaddrs(&ifa)) < 0)
+    char *host_ip;
+
+    rt_t rt = rtErr;
+    if (getifaddrs(&ifa) < 0)
     {
         pverbose("ipv4tcp: getifaddrs() failed: %s\n", gai_strerror(rt));
-        return rtErr;
+        return rt;
     }
-    char *host_ip;
     iifa = ifa;
     while (iifa != NULL)
     {
@@ -143,10 +133,11 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
             host_ip = inet_ntoa(((struct sockaddr_in *)iifa->ifa_addr)->sin_addr);
             // pdebug("interface: <%s>  <%s>\n", iifa->ifa_name, host_ip); // env.local_if.ifr_ifrn.ifrn_name
             // pdebug("'%s' == '%s', cmp %d\n", ops_.local_addr, host_ip, strncmp(ops_.local_addr, host_ip, strlen(ops_.local_addr)));
-            if (strncmp(ops_.local_addr, host_ip, strlen(ops_.local_addr)) == 0)
+            if (strncmp(ipaddr_, host_ip, strlen(ipaddr_)) == 0)
             {
-                strncpy(&env.local_if[0], iifa->ifa_name, strlen(iifa->ifa_name)); // Copy the interface name into the ifreq structure
-                env.local_if[IFNAMSIZ - 1] = '\0';
+                strncpy(_ifname, iifa->ifa_name, strlen(iifa->ifa_name)); // Copy the interface name into the ifreq structure
+                _ifname[IFNAMSIZ - 1] = '\0';
+                rt = rtOk;
                 //------------
                 // env.local_ip.sin_addr = ((struct sockaddr_in *)iifa->ifa_addr)->sin_addr;
                 // env.local_ip = *((struct sockaddr_in *)iifa->ifa_addr);
@@ -158,22 +149,35 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
     }
     freeifaddrs(ifa);
     // ----------------
+    return rt;
+}
 
-    // Protocol settings
-    env.timeslot = (size_t)ops_.tst_time_slot; // timed mode
-    env.mss = ops_.pkt_payload_size;           // packet payload
+// -------------------------------------------------------------------------------------------------------- !
+rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
+{
+
+    setDefaultEnv(); // Tester parameters (enviroment)
+
+    if (getInterfaceByIP(&ops_.local_addr[0], &env.local_if[0]) != rtOk) // &env.local_if[0]
+    {
+        pverbose("ipv4tcp: can't lookup valid interface !\n");
+    }
+
+    // Protocol details
+    env.mss = ops_.pkt_payload_size; // packet payload
     env.mtu = ops_.pkt_mtu_size;
-    env.if_bandwidth = ops_.bandwidth; // packet payload
+    env.if_bandwidth = ops_.bandwidth; // TODO: retrieves bandwidth from hardware
 
     // Performing mode
-    env.block_size = (size_t)ops_.tst_block_size; // block-size mod
+    env.block_size = (ssize_t)ops_.tst_block_size; // block-size mod
+    env.timeslot = (ssize_t)ops_.tst_time_slot;    // timed mode
 
     // Reporting
     env._ocsv = ops_.csv_enabled;
     env._ocsvheader = !ops_.csv_no_header;
     env._opkts = ops_.pktverbose; // Verbose mode
 
-    // Peers addressing
+    // Addressing
     if (ops_.service_num > 0) // Check range and Set IPv4 port number
     {
         if ((ops_.service_num < IPV4_MIN_SPORT) || (ops_.service_num > IPV4_MAX_SPORT))
@@ -181,7 +185,7 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
             pverbose("ipv4tcp: invalid port number: '%d' !\n", ops_.service_num);
             return rtErr;
         }
-        env.port = ops_.service_num;
+        env.port = (short unsigned int)ops_.service_num;
     }
     else // set default port
     {
@@ -189,25 +193,14 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
     }
     env.local_ip.sin_port = htons(env.port); // Service
 
-    if (ops_.run_mode == _ROLE_SERVER)
+    if (ops_.run_mode == _ROLE_SERVER) // _ROLE_SERVER, listen on specified address/interface
     {
-        if (strchr(ops_.local_addr, '*')) // Set default local_ip addresses/interfaces
+        if ((env.local_ip.sin_addr.s_addr = inet_addr(ops_.local_addr)) == 0) // dot-notations to IP network address
         {
-            // TODO: get local address !
-            // TODO: retrieves bandwidth from hardware
-            pverbose("ipv4tcp: bind local default IPv4 addresses !\n");
+            pverbose("ipv4tcp: invalid IP %s !\n", ops_.local_addr); // Error in address !
+            return rtErr;
         }
-        else // Listen on specified address/interface
-        {
-            // in_addr_t ip_addr;
-            //  TODO: retrieves bandwidth from hardware
-            if ((env.local_ip.sin_addr.s_addr = inet_addr(ops_.local_addr)) == 0) // dot-notations to IP network address
-            {
-                pverbose("ipv4tcp: invalid IP %s !\n", ops_.local_addr); // Error in address !
-                return rtErr;
-            }
-            // env.local_ip.sin_addr.s_addr = ip_addr; // pverbose("ipv4tcp: ready to start SERVER (%s:%d)\n", inet_ntoa(env.local.sin_addr), env.port);
-        }
+        // env.local_ip.sin_addr.s_addr = ip_addr; // pverbose("ipv4tcp: ready to start SERVER (%s:%d)\n", inet_ntoa(env.local.sin_addr), env.port);
     }
     else // _ROLE_CLIENT
     {
@@ -223,7 +216,7 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 
         if (inet_pton(AF_INET, ops_.remote_addr, &env.remote_ip.sin_addr) == 0) // converts 'dot-notation' in 'binary format' (https://man7.org/linux/man-pages/man3/inet.3.html)
         {
-            pverbose("ipv4tcp: invalid remote_ip address %s !\n", ops_.remote_addr); // Error in address !
+            pverbose("ipv4tcp: invalid loopback server address %s !\n", ops_.remote_addr); // Error in address !
             return rtErr;
         }
     }
@@ -231,11 +224,10 @@ rt_t set_env_ipv4tcp(options_t &ops_) // Set Tester Parameter
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-// GESTIONE CLIENT CONNESSO
+// LOOPBACK SERVER
 // -------------------------------------------------------------------------------------------------------- !
 void handle_incoming_connection(int remote_sk)
 {
-    // TODO: Multi-threading______________________
     ssize_t recvd, total_recv_data, total_recv_pkts;
     char *buffer;
     double start, elapsed, throughput;
@@ -244,11 +236,8 @@ void handle_incoming_connection(int remote_sk)
     total_recv_pkts = 0;
     buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
 
-
-    pverbose("ipv4tcp: open connection remote_ip [%s] \n", inet_ntoa(*((struct in_addr *)&env.rpeer))); // inet_ntoa() ??? inet_ntoa(((struct sockaddr_in *)iifa->ifa_addr)->sin_addr)
-
     start = now_millis();
-    while (1) // TODO: until testing_time-out or connection closed !!!!!!!!!!!!!
+    while (1) // until testing_time-out or connection closed !!!!!!!!!!!!!
     {
         recvd = recv(remote_sk, buffer, sizeof(buffer), 0); // recv timeout 30s, MSG_DONTWAIT (https://man7.org/linux/man-pages/man2/recv.2.html)
         if (recvd < 0)
@@ -268,43 +257,39 @@ void handle_incoming_connection(int remote_sk)
         {
             pverbose("ipv4tcp: sends back frisbee packet \n");
             buffer[5] = '<';
-            if (send(remote_sk, buffer, recvd, 0) < 0)
+            if (send(remote_sk, buffer, (size_t)recvd, 0) < 0)
             {
-                pverbose("ipv4tcp: socket send data error  #%d %s\n", errno, strerror(errno)); // errors ?
+                pverbose("ipv4tcp: socket send error  #%d %s\n", errno, strerror(errno)); // errors ?
                 break;
             }
         }
 #endif
         if (env._opkts)
         {
-            pverbose("rcvd pkt n. #%d - payload %d [bytes] \n", total_recv_pkts, recvd);
+            pverbose("rcvd pkt n. #%ld - payload %ld [bytes] \n", total_recv_pkts, recvd);
             // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
             // printf(buffer);
             // printf("\n");
         }
     }
-    elapsed = now_millis() - start;
-    throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(total_recv_data), elapsed) : 0;
+    elapsed = (now_millis() - start);
+    throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(double(total_recv_data)), elapsed) : 0;
     close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
     pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
     free(buffer);
-    pverbose("thread killed....!\n");
     return;
 }
 
-
-// -------------------------------------------------------------------------------------------------------- !
-// LOOPBACK SERVER
 // -------------------------------------------------------------------------------------------------------- !
 rt_t run_server_ipv4tcp()
 {
-    int opt, remote_sk = 0;
-    int local_sk = socket(env.local_ip.sin_family, SOCK_STREAM, 0);
+    int opt, remote_sk = 0, local_sk = 0;
 
     resetVars(vars); // Result variables
     vars.blocksize = (double)env.block_size;
-    vars.bandwidth = env.if_bandwidth; // Reference to bandwidth !!!!!!!
+    vars.bandwidth = (double)env.if_bandwidth; // Reference to bandwidth !!!!!!!
 
+    local_sk = socket(env.local_ip.sin_family, SOCK_STREAM, 0);
     if (local_sk < 0)
     {
         pverbose("ipv4tcp: can't allocate AF_INET, SOCK_STREAM fault #%d %s\n", errno, strerror(errno));
@@ -312,11 +297,9 @@ rt_t run_server_ipv4tcp()
     }
 
     // -- MSS - TCP layer (OSI layer 4)
-    size_t curr_set = 0;
     socklen_t len = sizeof(env.mss);
     if (env.mss > 0) // Set mss
     {
-        curr_set = env.mss;
         if (setsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, len) != 0) // set payload size (mss) !
         {
             pverbose("ipv4tcp: socket set option TCP_MAXSEG fault #%d %s\n", errno, strerror(errno));
@@ -326,8 +309,8 @@ rt_t run_server_ipv4tcp()
     if (getsockopt(local_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, &len) == 0) // read back payload size (4bytes)
     {
 
-        pverbose("ipv4tcp: uses packet payload size MSS: %d [bytes] \n", env.mss);
-        vars.pktpayload = env.mss;
+        pverbose("ipv4tcp: uses packet payload size MSS: %ld [bytes] \n", env.mss);
+        vars.pktpayload = (double)env.mss;
     }
     else
     {
@@ -342,7 +325,7 @@ rt_t run_server_ipv4tcp()
     strncpy(ifr.ifr_name, env.local_if, IFNAMSIZ - 1);
     if (env.mtu > 0) // Set mtu
     {
-        ifr.ifr_mtu = env.mtu;
+        ifr.ifr_mtu = (int)env.mtu;
         if (ioctl(local_sk, SIOCSIFMTU, &ifr) < 0) // Sets MTU value
         {
             pverbose("ipv4tcp: can't set MTU, ioctl SIOCSIFMTU failed #%d %s\n", errno, strerror(errno));
@@ -350,7 +333,6 @@ rt_t run_server_ipv4tcp()
             return rtErr;
         }
     }
-
     if (ioctl(local_sk, SIOCGIFMTU, &ifr) < 0) // gets the interface MTU - read back
     {
         pverbose("ipv4tcp: ioctl SIOCGIFMTU failed #%d %s\n", errno, strerror(errno));
@@ -360,8 +342,8 @@ rt_t run_server_ipv4tcp()
     else
     {
         env.mtu = ifr.ifr_ifru.ifru_mtu;
-        vars.pktmtu = env.mtu;
-        pverbose("ipv4tcp: uses interface '%s' with MTU: %d [bytes] !\n", env.local_if, env.mtu);
+        vars.pktmtu = (double)env.mtu;
+        pverbose("ipv4tcp: uses interface '%s' with MTU: %ld [bytes] !\n", env.local_if, env.mtu);
     }
 
     // -----------------------
@@ -392,59 +374,30 @@ rt_t run_server_ipv4tcp()
     }
 
     pverbose("ipv4tcp: listen on (%s:%d)\n", inet_ntoa(env.local_ip.sin_addr), env.port);
-    // -----------
-
-    /*
-        char *buffer = (char *)malloc(PACKET_BUFFER_MAX_SIZE);
-
-        // struct sockaddr_in rpeer; // connected remote_ip
-        // socklen_t rpeer_addr_len = sizeof(struct sockaddr_in);
-        // memset(&rpeer, 0, sizeof(struct sockaddr_in));
-
-        struct sockaddr rpeer; // connected remote_ip
-        socklen_t rpeer_len = sizeof(rpeer);
-        memset(&rpeer, 0, rpeer_len);
-        rpeer.sa_family = AF_INET; // IP family "AF_UNSPEC"
-        rpeer.sa_data[0] = '\0';   // IP family
-
-        while (1)
-        {
-            remote_sk = accept(local_sk, (struct sockaddr *)&rpeer, &rpeer_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
-            if (local_sk < 0)
-            {
-                pverbose("ipv4tcp: incoming connection from [%s] refused !\n", inet_ntoa(((struct sockaddr_in *)&rpeer)->sin_addr));
-                continue;
-            }
-            pverbose("ipv4tcp: open connection remote_ip [%s] \n", rpeer.sa_data); // inet_ntoa(((struct sockaddr_in *)&rpeer)->sin_addr));
-
-            // TODO: implement test protocol like fresbee !
-            ....
-    */
-
-    
     socklen_t rpeer_addr_len = sizeof(env.rpeer);
     while (1)
     {
         remote_sk = accept(local_sk, (struct sockaddr *)&env.rpeer, &rpeer_addr_len); // (https://man7.org/linux/man-pages/man2/accept.2.html)
         if (local_sk < 0)
         {
-            pverbose("ipv4tcp: incoming connection from [%s] refused !\n", env.rpeer.sa_data);
+            pverbose("ipv4tcp: incoming connection from [%s] refused !\n", inet_ntoa(((struct sockaddr_in *)&env.rpeer)->sin_addr));
             continue;
         }
-        // Delego Thread per la gestione dell'handle del socket collegato
+        pverbose("ipv4tcp: incoming connection from [%s] \n", inet_ntoa(((struct sockaddr_in *)&env.rpeer)->sin_addr));
         std::thread(handle_incoming_connection, remote_sk).detach();
-        pverbose("thread started....!\n");
-    }        
+    }
     shutdown(local_sk, 2); // 2 = stop both reception and transmission.
-    
-    // -----------
+    close(local_sk);
     return rtOk;
 }
 
 // -------------------------------------------------------------------------------------------------------- !
-// CLIENT TESTER
-// a) block-size mode: send all data and computes total time.
-// b) time-windowed mode: computes how many data are been sent in the time-windows period.
+// CLIENT TESTER:
+//
+// a) data-size mode: computes total time needed to send a data-block
+// b) time-slot mode: computes total data sended in the time-windows period
+// c) pkts-stub mode: computes total time to transfer a lot of fixed size packets
+//
 // -------------------------------------------------------------------------------------------------------- !
 rt_t run_client_ipv4tcp()
 {
@@ -460,6 +413,7 @@ rt_t run_client_ipv4tcp()
         return (rtErr);
     }
 
+    vars.setuptime = now_millis();
     // Retries............
     if (connect(remote_sk, (struct sockaddr *)&env.remote_ip, sizeof(env.remote_ip)) < 0) // (https://man7.org/linux/man-pages/man2/connect.2.html)
     {
@@ -471,7 +425,6 @@ rt_t run_client_ipv4tcp()
     pverbose("ipv4tcp: uses remote_ip loopback at [%s:%d]\n", inet_ntoa(env.remote_ip.sin_addr), env.port);
 
     // -- MSS - TCP layer (OSI layer 4)
-
     if (env.mss == 0)
     {
         env.mss = IPV4_DEF_MSS;
@@ -488,10 +441,11 @@ rt_t run_client_ipv4tcp()
     resetVars(vars); // Result variables
 
     vars.blocksize = (double)env.block_size;
-    vars.timeslot = (double)env.timeslot; // timed mode
-    vars.bandwidth = env.if_bandwidth;    // Reference to bandwidth !!!!!!!
-    // computes number of packets will be sended
-    vars.pktstosend = (env.mss >= env.block_size) ? 1.0 : trunc(env.block_size / env.mss) + env.block_size % env.mss;
+    vars.timeslot = (double)env.timeslot;      // timed mode
+    vars.bandwidth = (double)env.if_bandwidth; // Reference to bandwidth !!!!!!!
+
+    env.pktstosend = (ssize_t)(env.block_size / env.mss) + (env.block_size % env.mss); // computes number of packets will be sended
+    vars.pktstosend = (env.mss >= env.block_size) ? 1.0 : (double)env.pktstosend;
 
     // -- Run mode
 
@@ -539,13 +493,14 @@ rt_t run_client_ipv4tcp()
     total_sent_pkts = 0;
     total_sent_data = 0;
 
+    vars.setuptime = (now_millis() - vars.setuptime); // Setup-time
     vars.trasftime = now_millis();
 
     while (bytes2send > 0)
     {
         if (bytes2send >= env.mss)
         {
-            sent = send(remote_sk, packet, env.mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
+            sent = send(remote_sk, packet, (size_t)env.mss, 0); // (https://man7.org/linux/man-pages/man2/send.2.html)
         }
         else
         {
@@ -636,6 +591,7 @@ rt_t run_client_ipv4tcp()
     /*
 }
     */
+    shutdown(remote_sk, 2);
     close(remote_sk);
     free(packet);
 

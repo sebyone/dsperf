@@ -85,13 +85,14 @@ rt_t report_capacity(const model_info_t *info_, capacity_vars_t *vars_, report_i
         printf("    Errors:         %.2f [%%]\n", vars_->tsterrors);
         printf("    Test time:      %.3f [ms]\n", vars_->trasftime);
         printf("    Open time:      %.3f [ms]\n", vars_->setuptime);
+        
         printf("    Trip time:      %.3f [ms]\n", vars_->rtriptime);
         printf("    Jitter:         %.3f [ms]\n", (vars_->jitter));
         printf("    Latency:        %.3f [ms]\n", (vars_->latyency));
-        printf("    Throughput:     %.2f [Mbps]\n", vars_->throughput);
-        printf("                    %.2f [MB/s]\n", vars_->throughput / 8.0);
-        printf("                    %.2f [pps]\n", (vars_->trasftime / 1000.0) / vars_->pktssent);
-        printf("    Saturation:     %.2f [%%]\n", (vars_->saturation));
+        printf("    Throughput:     %.3f [Mbps]\n", vars_->throughput);
+        printf("                    %.3f [MB/s]\n", vars_->throughput / 8.0);
+        printf("                    %.3f [pps]\n", (vars_->trasftime / 1000.0) / vars_->pktssent);
+        printf("    Saturation:     %.3f [%%]\n", (vars_->saturation));
         printf("\n");
         break;
 
