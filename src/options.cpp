@@ -213,14 +213,14 @@ rt_t parse_args2options(int argc, char *argv[]) // Syntax validations
             }
             break;
         case 'p': // Service number (ipv4 port)
-            tmplong = atoi(optarg);
-            if (tmplong < 0)
+            tmpint = atoi(optarg);
+            if (tmpint < 0)
             {
                 pverbose("parser: port number must be >0\n");
                 return rtErr;
             }
             else
-                Options.service_num = (double)tmplong;
+                Options.service_num = tmpint;
             break;
 
         case 'b': // Traffic block size

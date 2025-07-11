@@ -32,6 +32,8 @@
 #define IFNAMSIZ IF_NAMESIZE
 */
 
+#define __SOCKET int
+
 #elif defined(__MINGW64__)
 
 #include <sys/types.h>
@@ -264,7 +266,7 @@ void handle_incoming_connection(int remote_sk)
 #if defined(IPV4_PKT_FRISBEE)
         if (buffer[1] == 'S' && buffer[2] == 'B' && buffer[4] == 'E' && buffer[5] == '>')
         {
-            pverbose("ipv4tcp: sends back frisbee packet \n");
+            // pverbose("ipv4tcp: sends back frisbee packet \n");  // NO FPRINT IN TEST CYCLE !!!!!!!!
             buffer[5] = '<';
             if (send(remote_sk, buffer, (size_t)recvd, 0) < 0)
             {
@@ -275,17 +277,21 @@ void handle_incoming_connection(int remote_sk)
 #endif
         if (env._opkts)
         {
-            pverbose("rcvd pkt n. #%ld - payload %ld [bytes] \n", total_recv_pkts, recvd);
+            //  pverbose("rcvd pkt n. #%ld - payload %ld [bytes] \n", total_recv_pkts, recvd); // NO FPRINT IN TEST CYCLE !!!!!!!!
             // printout header // verbose mode (https://man7.org/linux/man-pages/man3/cmsg.3.html)
             // printf(buffer);
             // printf("\n");
         }
     }
-    elapsed = (now_millis() - start);
-    throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(double(total_recv_data)), elapsed) : 0;
+
+    // shutdown(remote_sk, 2);
     close(remote_sk); // tries to complete pending transmission and close (SO_LINGER).
-    pverbose("ipv4tcp: closed, connection time %.6f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
+    elapsed = (now_millis() - start);
     free(buffer);
+
+    throughput = (elapsed > 0) ? __THROUGHPUT(_Bytes2Megabits(double(total_recv_data)), elapsed) : 0;
+    pverbose("ipv4tcp: closed, connection time %.3f [ms], recvd %ld [Bytes], throughput %.3f [Mbps] \n", elapsed, total_recv_data, throughput);
+
     return;
 }
 
@@ -351,7 +357,7 @@ rt_t run_server_ipv4tcp()
     else
     {
         env.mtu = ifr.ifr_ifru.ifru_mtu;
-        vars.pktmtu = (double)env.mtu;
+        vars.if_mtu = (double)env.mtu;
         pverbose("ipv4tcp: uses interface '%s' with MTU: %ld [bytes] !\n", env.local_if, env.mtu);
     }
 
@@ -395,7 +401,7 @@ rt_t run_server_ipv4tcp()
         pverbose("ipv4tcp: incoming connection from [%s] \n", inet_ntoa(((struct sockaddr_in *)&env.rpeer)->sin_addr));
         std::thread(handle_incoming_connection, remote_sk).detach();
     }
-    shutdown(local_sk, 2); // 2 = stop both reception and transmission.
+    // TEST   shutdown(local_sk, 2); // 2 = stop both reception and transmission.
     close(local_sk);
     return rtOk;
 }
@@ -413,7 +419,7 @@ rt_t run_client_ipv4tcp()
     socklen_t sklen; // Temp for socket options setting
     ssize_t bytes2send = 1;
     char *packet;
-    SOCKET remote_sk;
+    __SOCKET remote_sk;
 
     remote_sk = socket(env.remote_ip.sin_family, SOCK_STREAM, IPPROTO_IP); // Create socket IPv4/TCP (SOCK_STREAM) // AF_UNSPEC
     if (remote_sk < 0)
@@ -422,7 +428,7 @@ rt_t run_client_ipv4tcp()
         return (rtErr);
     }
 
-    vars.setuptime = now_millis();
+    vars.opentime = now_millis();
     // Retries............
     if (connect(remote_sk, (struct sockaddr *)&env.remote_ip, sizeof(env.remote_ip)) < 0) // (https://man7.org/linux/man-pages/man2/connect.2.html)
     {
@@ -438,11 +444,13 @@ rt_t run_client_ipv4tcp()
     {
         env.mss = IPV4_DEF_MSS;
     }
-    if (setsockopt(remote_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, sizeof(env.mss)) != 0) // set payload size
+    /*
+    if (setsockopt(remote_sk, SOL_IP, TCP_MAXSEG, &env.mss, sizeof(env.mss)) != 0) // set payload size (IPPROTO_TCP)
     {
         pverbose("ipv4tcp: can't set MSS!");
         return (rtErr);
     }
+    */
     pverbose("ipv4tcp: uses packet's payload size MSS:  %.0ld  [bytes] !\n", env.mss);
 
     env.mtu = IPV4_DEF_MTU;
@@ -502,8 +510,9 @@ rt_t run_client_ipv4tcp()
     total_sent_pkts = 0;
     total_sent_data = 0;
 
-    vars.setuptime = (now_millis() - vars.setuptime); // Setup-time
-    vars.trasftime = now_millis();
+    vars.opentime = (now_millis() - vars.opentime); // Setup-time
+
+    vars.conntime = now_millis(); // Connection-time
 
     while (bytes2send > 0)
     {
@@ -525,7 +534,7 @@ rt_t run_client_ipv4tcp()
 #if defined(IPV4_PKT_FRISBEE)
             pkt_rtrip_time = now_millis();
 #endif
-            pverbose("ipv4tcp: sended %ld \n", sent);
+            // pverbose("ipv4tcp: sended %ld \n", sent);    // NO FPRINT IN TEST CYCLE !!!!!!!!
             bytes2send -= sent;
             total_sent_pkts++;
             total_sent_data += sent;
@@ -555,15 +564,23 @@ rt_t run_client_ipv4tcp()
         }
 #endif
     }
-    // Update vars
-    vars.trasftime = (now_millis() - vars.trasftime); // Computes elapsed time !
+
+    // shutdown(remote_sk, 2);
+    close(remote_sk);                               // Close connection
+    vars.conntime = (now_millis() - vars.conntime); // elapsed time
+
+    free(packet);
+    // updates vars
 
     sklen = sizeof(env.mss);
-    if (getsockopt(remote_sk, IPPROTO_TCP, TCP_MAXSEG, &env.mss, &sklen) == 0) // read back payload size
+    if (getsockopt(remote_sk, SOL_IP, TCP_MAXSEG, &env.mss, &sklen) == 0) // read back payload size  IPPROTO_TCP
     {
         // if (env.mss != readed....
         pverbose("ipv4tcp: gets payload size MSS: %.0ld [bytes] !\n", env.mss);
     }
+    vars.pktheader = (double)(env.mtu - env.mss);
+    vars.pktpayload = (double)env.mss;
+    vars.pktefficiency = vars.pktpayload / (vars.pktpayload + vars.pktheader) * 100.0;
 
     /*
     vars.tstcounter = tstcounter;
@@ -580,14 +597,10 @@ rt_t run_client_ipv4tcp()
     vars.tsterrors = 1.0 - (vars.pktsrcvd / vars.pktssent) * -100.0;
 #endif
 
-    vars.throughput = __THROUGHPUT(_Bytes2Megabits(vars.datasent), vars.trasftime); // [Mbps]
-    vars.bandwidth = 0;                                                             // [Mbps]
-    vars.saturation = 0;                                                            // [Mbps]
+    vars.throughput = __THROUGHPUT(_Bytes2Megabits(vars.datasent), vars.conntime); // [Mbps]
+    vars.bandwidth = 0;                                                            // [Mbps]
+    vars.saturation = 0;                                                           // [Mbps]
     vars.jitter = abs(vars.jitter);
-
-    vars.pktpayload = (double)env.mss;
-    vars.pktheader = (double)(env.mtu - env.mss);
-    vars.pktefficiency = vars.pktpayload / (vars.pktpayload + vars.pktheader) * 100.0;
 
     if (env._ocsv) // Outputs test results
     {
@@ -600,9 +613,6 @@ rt_t run_client_ipv4tcp()
     /*
 }
     */
-    shutdown(remote_sk, 2);
-    close(remote_sk);
-    free(packet);
 
     // --- END: DATA-BLOCK
 

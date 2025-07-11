@@ -19,7 +19,6 @@ extern options_t Options; // options.h
 rt_t validate_options2model(func_ptr *_pfrun)
 {
     bool valid;
-    rt_t rt;
 
 #ifdef DEBUG //
     pverbose("DEBUG OPTIONS:\n");
@@ -82,40 +81,34 @@ rt_t validate_options2model(func_ptr *_pfrun)
     {
     case _PROTO_IPV4:
         pverbose("validator: uses tester 'IPV4TCP'\n");
-        rt = set_env_ipv4tcp(Options);
-        if (rt == rtOk)
+        if (Options.run_mode == _ROLE_SERVER)
         {
-            if (Options.run_mode == _ROLE_SERVER)
+            valid = (strlen(Options.local_addr) > 0);
+            if (!valid) // Server error !
             {
-                valid = (strlen(Options.local_addr) > 0);
-                if (!valid) // Server error !
-                {
-                    pverbose("validator: invalid parameters to run Loopback server !\n");
-                    print_help();
-                    return rtErr;
-                }
-                rt = run_server_ipv4tcp();
+                pverbose("validator: invalid parameters to run Loopback server !\n");
+                print_help();
+                return rtErr;
             }
-            else // _ROLE_CLIENT
-            {
-                valid = (strlen(Options.remote_addr) > 0);                                                                     // remote_addr
-                valid = valid && ((Options.tst_block_size > 0) || (Options.tst_pkts_num > 0 && Options.pkt_payload_size > 0)); // blocksize OR pkt_num AND pkt_size
-
-                if (!valid) // Client error !
-                {
-                    pverbose("validator: invalid parameters to run Tester !\n");
-                    print_help();
-                    return rtErr;
-                }
-                // repeats test repeat_n
-                while ((Options.tst_repeats > 0) && rt == rtOk)
-                {
-                    rt = run_client_ipv4tcp(); // bandwidth
-                    Options.tst_repeats--;
-                }
-            }
+            *_pfrun = run_server_ipv4tcp;
         }
-        return rt;
+        else // _ROLE_CLIENT
+        {
+            valid = (strlen(Options.remote_addr) > 0);                                                                     // remote_addr
+            valid = valid && ((Options.tst_block_size > 0) || (Options.tst_pkts_num > 0 && Options.pkt_payload_size > 0)); // blocksize OR pkt_num AND pkt_size
+
+            if (!valid) // Client error !
+            {
+                pverbose("validator: invalid parameters to run Tester !\n");
+                print_help();
+                return rtErr;
+            }
+
+            // repeats test repeat_n
+
+            *_pfrun = run_client_ipv4tcp; // bandwidth
+        };
+        return set_env_ipv4tcp(Options);
         break;
 
     case _PROTO_DAAS:

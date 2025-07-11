@@ -46,7 +46,8 @@ typedef struct // Model vars Capacity test
     double pktheader;     //  5. Header [bytes]
     double pktpayload;    //  4. Payload size [bytes]
     double pktefficiency; //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
-    double pktmtu;        //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
+    char if_name[32];     //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
+    double if_mtu;        //  6. Protocol Efficiency [%] - ratio: [%] = payload / packet_size ( header+payload )
     double fragmentation; //  6. Packets fragmentation
                           //
     double datasent;      // 10. Traffic data sent [MB]
@@ -57,8 +58,8 @@ typedef struct // Model vars Capacity test
     double pktsrcvd;      //  8. Pkt received
     double pktsloss;      //  9. Pkt loss  = pktssent - pktstosend     - ???????????????????????
                           //
-    double setuptime;     // 12. Total links management time  [ms]
-    double trasftime;     // 12. Total elapsed test time [ms]
+    double opentime;      // 12. Total links management time  [ms]
+    double conntime;      // 12. Total elapsed test time [ms]
     double rtriptime;     // Time to send-receive_ack
                           //
     double throughput;    // 13. Throughput [Mbps]
