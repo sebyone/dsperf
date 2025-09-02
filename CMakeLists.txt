@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(dperf VERSION 0.0.52 LANGUAGES C CXX)
+project(dsperf VERSION 0.0.52 LANGUAGES C CXX)
 
 # Version Header
 configure_file(
@@ -66,9 +66,9 @@ if(LIBDAAS_R019)
             ${INC_DIR}/daas.hpp
             ${INC_DIR}/daas_types.hpp
         )
-        target_compile_definitions(dperf PRIVATE "LIBDAAS_R019")
-        target_include_directories(dperf PRIVATE ${INC_DIR})
-        target_link_libraries(dperf PRIVATE ${LIB_DIR}/libdaas.a)
+        target_compile_definitions(dsperf PRIVATE "LIBDAAS_R019")
+        target_include_directories(dsperf PRIVATE ${INC_DIR})
+        target_link_libraries(dsperf PRIVATE ${LIB_DIR}/libdaas.a)
     else()
         message(FATAL_ERROR "Can't find LIBDAAS in ${INC_DIR}")
     endif()
